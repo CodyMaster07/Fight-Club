@@ -10,10 +10,13 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashSet;
 import javax.imageio.ImageIO;
 
 public abstract class Entity {
 
+    public static final double maxAngle = Math.PI / 12.0;
+    
     // Basic attributes
     private double x;
     private double y;
@@ -22,6 +25,12 @@ public abstract class Entity {
     private int maskHeight;
     private double speed;
     private int durability;
+    
+    private Ring ring;
+    
+    private int counter;
+    private double rand1;
+    private double rand2;
     
     protected BufferedImage sprite;
 
@@ -37,6 +46,10 @@ public abstract class Entity {
         this.maskHeight = maskH;
         this.speed = spd;
         this.durability = dur;
+        this.counter = 0;
+        this.rand1 = Math.random();
+        this.rand2 = Math.random();
+        this.ring = Ring.instance();
     }
 
     protected void loadSprite(String file_path) {
@@ -86,21 +99,68 @@ public abstract class Entity {
     }
 
     private void checkRingCollision() {
-        Ring ring = Ring.instance();
-
-        if (this.x + this.maskWidth >= ring.getWidth()
-                || this.y + this.maskHeight >= ring.getHeight()
-                || this.x <= 0.0
-                || this.y <= 0.0) {
-            double maxAngle = Math.PI / 12.0;
-            double dAngle = Math.PI + ((Math.random() > 0.5) ? Math.random() * maxAngle : -Math.random() * maxAngle);
-            setOrientation(normalizeAng(this.orientation + dAngle));
+        counter++;
+        if (counter >= 20) {
+            counter = 0;
+            rand1 = Math.random();
+            rand2 = Math.random();
         }
+        
+        double maxX = ring.getX() + ring.getWidth() - this.maskWidth;
+        double maxY = ring.getY() + ring.getHeight() - this.maskHeight;
+
+        boolean left = x <= ring.getX();
+        boolean right = x >= maxX;
+        boolean top = y <= ring.getY();
+        boolean bottom = y >= maxY;
+
+        
+        double reflect = 0.0;
+        double dAngle = ((rand1 > 0.5) ? rand2 * maxAngle : -rand2 * maxAngle);
+
+        if (right) {
+            reflect = (Math.PI*0.5 - this.orientation)*2.0;
+            this.x = maxX;
+            ring.setCollided(2);
+            
+        } else if (bottom) {
+            reflect = (-Math.PI - this.orientation)*2.0;
+            this.y = maxY;
+            ring.setCollided(3);
+        } else if (left) {
+            reflect = (Math.PI*1.5 - this.orientation)*2.0;
+            this.x = ring.getX();
+            ring.setCollided(4);
+        } else if (top) {
+            reflect = (Math.PI - this.orientation)*2.0;
+            this.y = ring.getY();
+            ring.setCollided(1);
+        }
+        if (right || left || top || bottom)
+            setOrientation(normalizeAng(this.orientation + reflect + dAngle));
+        
     }
     
+    public boolean intersects(Entity other) {
+        if (other == null || other == this)
+            return false;
+        
+        double maxX = this.x + this.maskWidth;
+        double maxY = this.y + this.maskHeight;
+        
+        double oMaxX = other.x + other.maskWidth;
+        double oMaxY = other.y + other.maskHeight;
+        
+        return this.x < oMaxX && maxX > other.x && this.y < oMaxY && maxY > other.y; // Script padrão de colisão AABB
+    }
+    
+    public void onCollision(Entity other) {
+        // Must be overwritten para cada Fighter
+    }
+ 
     public void tick() {
-        checkRingCollision();
         move();
+        checkRingCollision();
     }
     
     public void render(Graphics g) {

@@ -3,7 +3,9 @@ package com.game;
 import java.awt.Canvas;
 import java.awt.Dimension;
 import javax.swing.JFrame;
-
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferStrategy;
 /**
  *
  * @author evan.gabb
@@ -12,29 +14,31 @@ public class Window {
     
     private Canvas canvas;
     private JFrame frame;
-    private int width = 400;
-    private int height = 300;
+    
+    private static final int NAT_WIDTH = 800;
+    private static final int NAT_HEIGHT = 600;
+    
+    private final int scale;
 
     public Window(String title, int scale) {
-        this.width = scale*this.width;
-        this.height = scale*this.height;
+        if (scale < 1) {
+            throw new IllegalArgumentException("Scale deve ser maior do que 0");
+        }
 
-        frame = new JFrame(title);
-        frame.setSize(this.width, this.height);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setResizable(false);
-        frame.setLocationRelativeTo(null);
-
+        this.scale = scale;
+        
         // O Canvas é a tela em branco onde a Engine vai desenhar as entidades
         canvas = new Canvas();
-        
-        canvas.setPreferredSize(new Dimension(this.width, this.height));
-        canvas.setMaximumSize(new Dimension(this.width, this.height));
-        canvas.setMinimumSize(new Dimension(this.width, this.height));
-        canvas.setFocusable(false); // Deixa o foco do teclado no JFrame
+        canvas.setPreferredSize(new Dimension(NAT_WIDTH*scale, NAT_HEIGHT*scale));
 
+        canvas.setFocusable(false); // Deixa o foco do teclado no JFrame
+        
+        frame = new JFrame(title);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
         frame.add(canvas);
         frame.pack(); // Ajusta as bordas
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
@@ -42,7 +46,28 @@ public class Window {
         return canvas;
     }
 
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
+    public int getNatWidth() { return NAT_WIDTH; }
+    public int getNatHeight() { return NAT_HEIGHT; }
    
+    public Graphics2D beginFrame() {
+        BufferStrategy buffers = canvas.getBufferStrategy();
+        
+        if (buffers == null) {
+            canvas.createBufferStrategy(3);
+            return null;
+        }
+        
+        Graphics2D g = (Graphics2D) buffers.getDrawGraphics();
+        
+        g.scale(scale, scale);
+        g.setColor(new Color(30, 30, 30));
+        g.fillRect(0, 0, NAT_WIDTH, NAT_HEIGHT);
+        
+        return g;
+    }
+    
+    public void showFrame(Graphics2D g) {
+        g.dispose();
+        canvas.getBufferStrategy().show();
+    }
 }
