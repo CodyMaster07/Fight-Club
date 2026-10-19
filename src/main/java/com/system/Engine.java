@@ -25,12 +25,12 @@ public class Engine implements Runnable {
     
     private List<Entity> entities;
     
-    public Engine(int frameScale) {
+    public Engine (int[] res, int[] ring, int frameScale, int players, int[] initialPos) {
         entities = new ArrayList<>();
-        window = new Window("Fight Club Game", frameScale);
+        window = new Window("Fight Club Game", res, frameScale);
         
-        int ringWidth = 500;
-        int ringHeight = 500;
+        int ringWidth = ring[0];
+        int ringHeight = ring[1];
         
         double ringX = (window.getNatWidth() - ringWidth) / 2.0;
         double ringY = (window.getNatHeight() - ringHeight) / 2.0;
@@ -38,14 +38,14 @@ public class Engine implements Runnable {
         double centerX = window.getNatWidth() / 2.0;
         double centerY = window.getNatHeight() / 2.0;
         
-        ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
+        this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
-        entities.add(new Fighter(centerX + 50,centerY + 50, 4, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY - 50,centerY - 50, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
-        entities.add(new Fighter(centerX + 100,centerY + 100, 4, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY - 100,centerY - 50, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
-        entities.add(new Fighter(centerX - 50,centerY + 30, 5, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY + 50,centerY - 20, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
+        entities.add(new Fighter(centerX + 50 ,centerY + 50 , 4,  Math.PI / 4.0 , "/res/ballRed.png" ));
+        entities.add(new Fighter(centerY - 50 ,centerY - 50 , 3, -Math.PI * 0.75, "/res/ballBlue.png"));
+        entities.add(new Fighter(centerX + 100,centerY + 100, 4,  Math.PI / 4.0 , "/res/ballRed.png" ));
+        entities.add(new Fighter(centerY - 100,centerY - 50 , 3, -Math.PI * 0.75, "/res/ballBlue.png"));
+        entities.add(new Fighter(centerX - 50 ,centerY + 30 , 5,  Math.PI / 4.0 , "/res/ballRed.png" ));
+        entities.add(new Fighter(centerY + 50 ,centerY - 20 , 3, -Math.PI * 0.75, "/res/ballBlue.png"));
     }
     
     public synchronized void start() {
@@ -80,7 +80,7 @@ public class Engine implements Runnable {
         }
     }
     
-    private void physicalCollision(Entity a, Entity b) {
+    private void physicalCollision (Entity a, Entity b) {
         double distX = b.getX() + (b.getMaskWidth()/2.0) - (a.getX() + (a.getMaskWidth()/2.0));
         double distY = b.getY() + (b.getMaskHeight()/2.0) - (a.getY() + (a.getMaskHeight()/2.0));
         
