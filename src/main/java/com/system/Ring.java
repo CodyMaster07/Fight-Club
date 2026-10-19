@@ -78,12 +78,12 @@ public class Ring { // Singleton of the Ring
     
     public void tick() {
         if (hasCollided > 0) {
-            if (counter < 1) {
+            if (counter < 2) {
                 switch (hasCollided) {
-                    case 1 -> this.y -= 2.0;
-                    case 2 -> this.x += 2.0;
-                    case 3 -> this.y += 2.0;
-                    case 4 -> this.x -= 2.0;
+                    case 1 -> this.y -= 3.0;
+                    case 2 -> this.x += 3.0;
+                    case 3 -> this.y += 3.0;
+                    case 4 -> this.x -= 3.0;
                 }
             }
             counter++;

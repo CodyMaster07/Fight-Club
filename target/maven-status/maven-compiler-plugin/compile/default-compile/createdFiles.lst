@@ -4,3 +4,4 @@ com/system/Ring.class
 com/entities/Fighter.class
 com/game/Window.class
 com/system/Engine.class
+com/entities/Boxer.class

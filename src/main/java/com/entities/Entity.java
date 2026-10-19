@@ -15,15 +15,17 @@ import javax.imageio.ImageIO;
 
 public abstract class Entity {
 
-    public static final double maxAngle = Math.PI / 12.0;
+    public static final double maxAngleVar = Math.PI / 12.0;
     
     // Basic attributes
-    private double x;
-    private double y;
-    private double orientation;
-    private int maskWidth;
-    private int maskHeight;
-    private double speed;
+    protected double x;
+    protected double y;
+    protected double orientation;
+    protected final int maskWidth;
+    protected final int maskHeight;
+    protected double speed;
+    private int spriteScale;
+    
     private int durability;
     
     private Ring ring;
@@ -34,23 +36,37 @@ public abstract class Entity {
     
     protected BufferedImage sprite;
 
-    public Entity(double x, double y) {
-        this(x, y, 0.0, 10, 10, 0.0, 1);
-    }
-
-    public Entity(double x, double y, double ort, int maskW, int maskH, double spd, int dur) {
+    public Entity(double x, double y, double ort, int maskW, int maskH, double spd, int dur, int spriteScale) {
+        if (spriteScale < 1) {
+            throw new IllegalArgumentException("A escala deve ser maior ou igual a 1.");
+        }
+        
+        this.spriteScale = spriteScale;
+        
         this.x = x;
         this.y = y;
         this.orientation = ort;
-        this.maskWidth = maskW;
-        this.maskHeight = maskH;
+        this.maskWidth = maskW * spriteScale;
+        this.maskHeight = maskH * spriteScale;
+        
         this.speed = spd;
         this.durability = dur;
+        
         this.counter = 0;
         this.rand1 = Math.random();
         this.rand2 = Math.random();
         this.ring = Ring.instance();
     }
+    
+    public Entity(double x, double y, double ort, int maskW, int maskH, double spd, int dur) {
+        this(x, y, ort, maskW, maskH, spd, dur, 1);
+    }
+    
+    public Entity(double x, double y) {
+        this(x, y, 0.0, 10, 10, 0.0, 1, 1);
+    }
+
+
 
     protected void loadSprite(String file_path) {
         try {
@@ -61,8 +77,6 @@ public abstract class Entity {
             }
             
             sprite = ImageIO.read(url);
-            this.maskWidth = sprite.getWidth();
-            this.maskHeight = sprite.getHeight();
         } catch (IOException e) {
             System.err.println("Fail to read sprite file.");
             e.printStackTrace();
@@ -77,12 +91,18 @@ public abstract class Entity {
     public double getSpeed() { return speed; }
     public int getDurability() { return durability; }
 
+    public int getRenderWidth() {
+        return sprite != null ? sprite.getWidth() * spriteScale : maskWidth;
+    }
+
+    public int getRenderHeight() {
+        return sprite != null ? sprite.getHeight() * spriteScale : maskHeight;
+    }
+    
     // Setters
     public void setX(double x) { this.x = x; }
     public void setY(double y) { this.y = y; }
     public void setOrientation(double orientation) { this.orientation = orientation; }
-    public void setMaskWidth(int maskWidth) { this.maskWidth = maskWidth; }
-    public void setMaskHeight(int maskHeight) { this.maskHeight = maskHeight; }
     public void setSpeed(double speed) { this.speed = speed; }
     public void setDurability(int durability) { this.durability = durability; }
 
@@ -116,7 +136,7 @@ public abstract class Entity {
 
         
         double reflect = 0.0;
-        double dAngle = ((rand1 > 0.5) ? rand2 * maxAngle : -rand2 * maxAngle);
+        double dAngle = ((rand1 > 0.5) ? rand2 * maxAngleVar : -rand2 * maxAngleVar);
 
         if (right) {
             reflect = (Math.PI*0.5 - this.orientation)*2.0;
@@ -165,11 +185,11 @@ public abstract class Entity {
     
     public void render(Graphics g) {
         if (sprite != null) {
-            g.drawImage(sprite, (int) x, (int) y, null);
+            g.drawImage(sprite, (int) x, (int) y, getRenderWidth(), getRenderHeight(), null);
         } else {
             // Se não tiver sprite, renderiza retângulo vermelho
             g.setColor(Color.RED);
-            g.fillRect((int) x, (int) y, maskWidth, maskHeight);
+            g.fillRect((int) x, (int) y, getRenderWidth(), getRenderHeight());
         }
     }
 }

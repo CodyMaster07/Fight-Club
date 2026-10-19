@@ -5,6 +5,7 @@ package com.system;
  * @author evan.gabb
  */
 
+import com.entities.Boxer;
 import com.entities.Entity;
 import com.entities.Fighter;
 import com.game.Window;
@@ -15,8 +16,8 @@ import java.util.List;
  
 public class Engine implements Runnable {
     
-    public static final double tps = 60.0;
-    public static final double ns = 1000000000 / tps;
+    public static final double fps = 60.0;
+    public static final double ns = 1000000000 / fps;
     
     private boolean isRunning = false;
     private Thread gameThread;
@@ -40,12 +41,8 @@ public class Engine implements Runnable {
         
         ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
-        entities.add(new Fighter(centerX + 50,centerY + 50, 4, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY - 50,centerY - 50, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
-        entities.add(new Fighter(centerX + 100,centerY + 100, 4, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY - 100,centerY - 50, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
-        entities.add(new Fighter(centerX - 50,centerY + 30, 5, Math.PI / 4.0, "/res/ballRed.png"));
-        entities.add(new Fighter(centerY + 50,centerY - 20, 3, -Math.PI * 0.75, "/res/ballBlue.png"));
+        entities.add(new Boxer(centerX + 50,centerY + 50, Math.PI / 4.0));
+        entities.add(new Boxer(centerX - 50,centerY - 50, -Math.PI / 4.0));
     }
     
     public synchronized void start() {
@@ -72,7 +69,7 @@ public class Engine implements Runnable {
                 Entity b = entities.get(j);
                 if (a.intersects(b)) {
                     physicalCollision(a, b); 
-                    System.out.println("Tocou");
+                    // System.out.println("Tocou");
                     a.onCollision(b);
                     b.onCollision(a);
                 }
@@ -123,8 +120,8 @@ public class Engine implements Runnable {
                 }
             }
         }
-        //adAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngle : -Math.random() * Entity.maxAngle);
-        //bdAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngle : -Math.random() * Entity.maxAngle);
+        adAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
+        bdAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
         a.setOrientation(Entity.normalizeAng(a.getOrientation() + aReflect + adAngle));
         b.setOrientation(Entity.normalizeAng(b.getOrientation() + bReflect + bdAngle));
     }
@@ -154,7 +151,16 @@ public class Engine implements Runnable {
             Entity e = entities.get(i);
             e.tick();
         }
-        checkEntitiesCollision();
+        checkEntitiesCollision(); // Aqui os danos são registrados mas ficam pendentes
+
+
+        for (Entity entity : entities) {
+            if (entity instanceof Fighter fighter) {
+                fighter.applyPendingDamage();
+            }
+        }
+
+        entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
         ring.tick();
     }
     
