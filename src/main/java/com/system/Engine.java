@@ -33,7 +33,7 @@ public class Engine implements Runnable {
         entities = new ArrayList<>();
         window = new Window("Fight Club Game", res, frameScale);
         
-        double[][] posPos = { {50.0, 50.0}, {-50.0, 50.0}, {-50.0, -50.0}, {50.0, -50.0} };
+        double[][] posPos = { {100.0, -100.0}, {-100.0, -100.0}, {-100.0, 100.0}, {100.0, 100.0} };
         
         int ringWidth = ring[0];
         int ringHeight = ring[1];
