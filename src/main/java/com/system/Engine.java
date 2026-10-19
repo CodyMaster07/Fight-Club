@@ -8,6 +8,7 @@ package com.system;
 import com.entities.Boxer;
 import com.entities.Entity;
 import com.entities.Fighter;
+import com.entities.Ball;
 import com.game.Window;
 import com.system.Ring;
 import java.awt.Graphics2D;
@@ -26,12 +27,12 @@ public class Engine implements Runnable {
     
     private List<Entity> entities;
     
-    public Engine(int frameScale) {
+    public Engine (int[] res, int[] ring, int frameScale, int players, int[] initialPos) {
         entities = new ArrayList<>();
-        window = new Window("Fight Club Game", frameScale);
+        window = new Window("Fight Club Game", res, frameScale);
         
-        int ringWidth = 500;
-        int ringHeight = 500;
+        int ringWidth = ring[0];
+        int ringHeight = ring[1];
         
         double ringX = (window.getNatWidth() - ringWidth) / 2.0;
         double ringY = (window.getNatHeight() - ringHeight) / 2.0;
@@ -39,10 +40,15 @@ public class Engine implements Runnable {
         double centerX = window.getNatWidth() / 2.0;
         double centerY = window.getNatHeight() / 2.0;
         
-        ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
+        this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
+//<<<<<<< HEAD
         entities.add(new Boxer(centerX + 50,centerY + 50, Math.PI / 4.0));
         entities.add(new Boxer(centerX - 50,centerY - 50, -Math.PI / 4.0));
+//=======
+        entities.add(new Ball(centerX + 100, centerY + 100,  Math.PI / 4.0, 5.0 , "/res/ballRed.png" ));
+        entities.add(new Ball(centerX - 50 ,centerY - 50 , -Math.PI * 0.75, 6.0, "/res/ballBlue.png"));
+//>>>>>>> main
     }
     
     public synchronized void start() {
@@ -77,7 +83,7 @@ public class Engine implements Runnable {
         }
     }
     
-    private void physicalCollision(Entity a, Entity b) {
+    private void physicalCollision (Entity a, Entity b) {
         double distX = b.getX() + (b.getMaskWidth()/2.0) - (a.getX() + (a.getMaskWidth()/2.0));
         double distY = b.getY() + (b.getMaskHeight()/2.0) - (a.getY() + (a.getMaskHeight()/2.0));
         

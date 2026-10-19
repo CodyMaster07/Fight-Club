@@ -15,16 +15,14 @@ public class Window {
     private Canvas canvas;
     private JFrame frame;
     
-    private static final int NAT_WIDTH = 800;
-    private static final int NAT_HEIGHT = 600;
+    private final int NAT_WIDTH;
+    private final int NAT_HEIGHT;
     
     private final int scale;
 
-    public Window(String title, int scale) {
-        if (scale < 1) {
-            throw new IllegalArgumentException("Scale deve ser maior do que 0");
-        }
-
+    public Window(String title, int[] res, int scale) {
+        NAT_WIDTH = res[0];
+        NAT_HEIGHT = res[1];
         this.scale = scale;
         
         // O Canvas é a tela em branco onde a Engine vai desenhar as entidades

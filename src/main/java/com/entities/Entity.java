@@ -62,8 +62,23 @@ public abstract class Entity {
         this(x, y, ort, maskW, maskH, spd, dur, 1);
     }
     
-    public Entity(double x, double y) {
-        this(x, y, 0.0, 10, 10, 0.0, 1, 1);
+    public Entity(double x, double y, double ort, double spd, String file_path) { // Construtor usado em ball que não carrega spritesheet
+        this.spriteScale = 1;
+        
+        this.x = x;
+        this.y = y;
+        this.orientation = ort;      
+        this.speed = spd;
+        this.durability = 1;
+        
+        this.counter = 0;
+        this.rand1 = Math.random();
+        this.rand2 = Math.random();
+        this.ring = Ring.instance();
+        
+        loadSprite(file_path);
+        this.maskWidth = getRenderWidth();
+        this.maskHeight = getRenderHeight();
     }
 
 

@@ -5,3 +5,4 @@ com/entities/Fighter.class
 com/game/Window.class
 com/system/Engine.class
 com/entities/Boxer.class
+com/entities/Ball.class
