@@ -11,8 +11,8 @@ public class Main {
     private static int[] res = {800, 600};
     private static int[] ring = {500, 500};
     private static int frameScale = 1;
-    private static int players = 3;
-    private static int[] initialPos = new int[players];
+    private static int[] players = {4, 2};
+    private static int[] initialPos = new int[players[0] + players[1]];
     public static void main(String[] args) {
     	try {
     		parseArgs(args);
@@ -38,7 +38,7 @@ public class Main {
                     System.out.println("\t-h\n\t--help\n\t\tExibe esta mensagem de ajuda.");
                     System.out.println("\t-d <largura> <altura>\n\t--display <largura> <altura>\n\t\tConfigura a resolução total da janela. Não pode ser menor que o tamanho do ringue. Padrão = 800x600.");
                     System.out.println("\t-r <largura> <altura>\n\t--ringue <largura> <altura>\n\t\tConfigura o tamanho do ringue. Padrão = 500x500.");
-                    System.out.println("\t-p <quantidade> [quadrantes]\n\t--players <quantidade> [quadrantes]\n\t\tConfigura o número de jogadores em cada time. Pode-se também definir o quadrante do ringue em que cada um irá começar. Pode ser também alterado no menu (FIX). Padrão = 3. Quadrante 0 será um quadrante aleatório (preferencialmente não ocupado).");
+                    System.out.println("\t-p <quantidade-bolas> <quantidade-boxers> [quadrantes]\n\t--players <quantidade> [quadrantes]\n\t\tConfigura o número de bolas e boxers. Pode-se também definir o quadrante do ringue em que cada um irá começar. Pode ser também alterado no menu (FIX). Padrão = 3. Quadrante 0 será um quadrante aleatório (preferencialmente não ocupado).");
                     System.out.println("\t-s\n\t--scale\n\t\tDefine a escala (~zoom) da janela. Tem que ser um valor inteiro. Padrão = 1.");
                     System.exit(0);
                     break;
@@ -81,19 +81,20 @@ public class Main {
                 // Nº de jogadores e posições
                 case "-p":
                 case "--players":
-                    if (i + 1 >= args.length) {
+                    if (i + 2 >= args.length) {
                         throw new IllegalArgumentException("Erro: Argumento faltando após --players.");
                     }
                     try {
-                        players = Integer.parseInt(args[++i]);
-                        initialPos = new int[players];
-                        for (int j = 0; j < players && ++i < args.length && args[i].charAt(0) != '-'; j++) {
+                        players[0] = Integer.parseInt(args[++i]); // Bolas
+                        players[1] = Integer.parseInt(args[++i]); // Boxers
+                        initialPos = new int[players[0] + players[1]];
+                        for (int j = 0; j < players[0] + players[1] && ++i < args.length && args[i].charAt(0) != '-'; j++) {
                             initialPos[j] = Integer.parseInt(args[i]);
                         }
                     } catch (Exception e) {
                         throw new IllegalArgumentException(String.format("Erro: Argumento inválido após --players: \"%s\" não é um inteiro.", args[i]));
                     }
-                    for (int j = 0; j < players; j++) {
+                    for (int j = 0; j < players[0] + players[1]; j++) {
                         if (initialPos[j] < 0 || initialPos[j] > 4) {
                             throw new IllegalArgumentException(String.format("Erro: Posição inválida após --players: \"%d\" não é um quadrante válido.", initialPos[j]));
                         }

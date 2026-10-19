@@ -27,7 +27,7 @@ public class Engine implements Runnable {
     
     private List<Entity> entities;
     
-    public Engine (int[] res, int[] ring, int frameScale, int players, int[] initialPos) {
+    public Engine (int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
         entities = new ArrayList<>();
         window = new Window("Fight Club Game", res, frameScale);
         
@@ -43,11 +43,14 @@ public class Engine implements Runnable {
         this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
 //<<<<<<< HEAD
-        entities.add(new Boxer(centerX + 50,centerY + 50, Math.PI / 4.0));
-        entities.add(new Boxer(centerX - 50,centerY - 50, -Math.PI / 4.0));
+        int n_entity = 0;
+        for (int i = 0; i < players[0]; i++) {
+            entities.add(new Ball(centerX + 100, centerY + 100,  Math.PI / 4.0, 5.0 , "/res/ballRed.png" ));
+        }
 //=======
-        entities.add(new Ball(centerX + 100, centerY + 100,  Math.PI / 4.0, 5.0 , "/res/ballRed.png" ));
-        entities.add(new Ball(centerX - 50 ,centerY - 50 , -Math.PI * 0.75, 6.0, "/res/ballBlue.png"));
+        for (int i = 0; i < players[1]; i++) {
+            entities.add(new Boxer(centerX + 50,centerY + 50, Math.PI / 4.0));
+        }
 //>>>>>>> main
     }
     
