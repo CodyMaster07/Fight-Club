@@ -14,9 +14,11 @@ import com.system.Ring;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
  
 public class Engine implements Runnable {
     
+    Random random = new Random();
     public static final double fps = 60.0;
     public static final double ns = 1_000_000_000 / fps;
     
@@ -31,6 +33,8 @@ public class Engine implements Runnable {
         entities = new ArrayList<>();
         window = new Window("Fight Club Game", res, frameScale);
         
+        double[][] posPos = { {50.0, 50.0}, {-50.0, 50.0}, {-50.0, -50.0}, {50.0, -50.0} };
+        
         int ringWidth = ring[0];
         int ringHeight = ring[1];
         
@@ -42,16 +46,19 @@ public class Engine implements Runnable {
         
         this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
-//<<<<<<< HEAD
+        for (int i = 0; i < initialPos.length; i++) {
+            if (initialPos[i] == 0)
+                initialPos[i] = random.nextInt(1, 5);
+        }
+        
         int n_entity = 0;
         for (int i = 0; i < players[0]; i++) {
-            entities.add(new Ball(centerX + 100, centerY + 100,  Math.PI / 4.0, 5.0 , "/res/ballRed.png" ));
+            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
+            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
         }
-//=======
         for (int i = 0; i < players[1]; i++) {
-            entities.add(new Boxer(centerX + 50,centerY + 50, Math.PI / 4.0));
+            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
         }
-//>>>>>>> main
     }
     
     public synchronized void start() {
