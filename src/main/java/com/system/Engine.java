@@ -18,7 +18,7 @@ import java.util.List;
 public class Engine implements Runnable {
     
     public static final double fps = 60.0;
-    public static final double ns = 1000000000 / fps;
+    public static final double ns = 1_000_000_000 / fps;
     
     private boolean isRunning = false;
     private Thread gameThread;
@@ -83,15 +83,17 @@ public class Engine implements Runnable {
         }
     }
     
+    // Chamada somente se já houver sobreposição
     private void physicalCollision (Entity a, Entity b) {
-        double distX = b.getX() + (b.getMaskWidth()/2.0) - (a.getX() + (a.getMaskWidth()/2.0));
+        double distX = b.getX() + (b.getMaskWidth() /2.0) - (a.getX() + (a.getMaskWidth() /2.0));
         double distY = b.getY() + (b.getMaskHeight()/2.0) - (a.getY() + (a.getMaskHeight()/2.0));
         
-        double overlapX = (a.getMaskWidth() + b.getMaskWidth()) / 2.0 - Math.abs(distX);
+        double overlapX = (a.getMaskWidth()  + b.getMaskWidth())  / 2.0 - Math.abs(distX);
         double overlapY = (a.getMaskHeight() + b.getMaskHeight()) / 2.0 - Math.abs(distY);
         double aReflect = 0.0, adAngle = 0.0, bReflect = 0.0, bdAngle = 0.0;
         
-        if (overlapX < overlapY) { // Está colidindo no eixo X
+        if (overlapX < overlapY) { // Está colidindo no eixo X, pois o outro eixo deve estar alinhado
+System.out.println("X-coll: ");
             double dirA2B = (distX >= 0) ? 1.0 : -1.0;
             double correction = overlapX / 2.0 + 0.001;
 
@@ -100,15 +102,11 @@ public class Engine implements Runnable {
             
             double relVelX = b.getSpeed()* Math.cos(b.getOrientation()) - a.getSpeed()* Math.cos(a.getOrientation());
             if (relVelX * dirA2B < 0.0) { // Realmente estão se aproximando e tem que mudar os ângulos        
-                if (distX >= 0) { // a fazendo colisão right e b fazendo colisão left
-                    aReflect = (Math.PI*0.5 - a.getOrientation())*2.0;
-                    bReflect = (Math.PI*1.5 - b.getOrientation())*2.0;
-                } else { // a fazendo colisão left e b fazendo colisão right
-                    aReflect = (Math.PI*1.5 - a.getOrientation())*2.0;
-                    bReflect = (Math.PI*0.5 - b.getOrientation())*2.0;
-                }
+                aReflect = Entity.normalizeAng(Math.PI - a.getOrientation());
+                bReflect = Entity.normalizeAng(Math.PI - b.getOrientation());
             }
         } else {
+System.out.println("Y-coll: ");
             double dirA2B = (distY >= 0) ? 1.0 : -1.0;
             double correction = overlapY / 2.0 + 0.001;
 
@@ -117,19 +115,16 @@ public class Engine implements Runnable {
             
             double relVelY = b.getSpeed()* Math.sin(b.getOrientation()) - a.getSpeed()* Math.sin(a.getOrientation());
             if (relVelY * dirA2B < 0.0) { // Realmente estão se aproximando e tem que mudar os ângulos       
-                if (distY >= 0) { // a fazendo colisão bottom e b fazendo colisão top
-                    aReflect = (-Math.PI - a.getOrientation())*2.0;
-                    bReflect = (Math.PI - b.getOrientation())*2.0;
-                } else { // a fazendo colisão top e b fazendo colisão bottom
-                    aReflect = (Math.PI - a.getOrientation())*2.0;
-                    bReflect = (-Math.PI - b.getOrientation())*2.0;
-                }
+                aReflect = Entity.normalizeAng(-1 * a.getOrientation());
+                bReflect = Entity.normalizeAng(-1 * b.getOrientation());
             }
         }
-        adAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
-        bdAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
-        a.setOrientation(Entity.normalizeAng(a.getOrientation() + aReflect + adAngle));
-        b.setOrientation(Entity.normalizeAng(b.getOrientation() + bReflect + bdAngle));
+        adAngle = 0;//((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
+        bdAngle = 0;//((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
+System.out.printf("\tA: %f -> %f -> %f\n", a.getOrientation()*180/Math.PI, aReflect*180/Math.PI, adAngle*180/Math.PI);
+System.out.printf("\tB: %f -> %f -> %f\n", b.getOrientation()*180/Math.PI, bReflect*180/Math.PI, bdAngle*180/Math.PI);
+        a.setOrientation(Entity.normalizeAng(aReflect + adAngle));
+        b.setOrientation(Entity.normalizeAng(bReflect + bdAngle));
     }
     
     @Override 

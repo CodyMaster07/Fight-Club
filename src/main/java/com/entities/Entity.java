@@ -123,6 +123,7 @@ public abstract class Entity {
 
     public static double normalizeAng(double angle) {
         return Math.atan2(Math.sin(angle), Math.cos(angle));
+//        return angle;
     }
 
     public void move() {
