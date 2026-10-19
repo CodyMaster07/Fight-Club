@@ -102,37 +102,35 @@ public class Engine implements Runnable {
         double overlapY = (a.getMaskHeight() + b.getMaskHeight()) / 2.0 - Math.abs(distY);
         double aReflect = 0.0, adAngle = 0.0, bReflect = 0.0, bdAngle = 0.0;
         
+        double vax, vay, vbx, vby;
+
         if (overlapX < overlapY) { // Está colidindo no eixo X, pois o outro eixo deve estar alinhado
-System.out.println("X-coll: ");
             double dirA2B = (distX >= 0) ? 1.0 : -1.0;
             double correction = overlapX / 2.0 + 0.001;
-
             a.setX(a.getX() - dirA2B * correction);
             b.setX(b.getX() + dirA2B * correction);
-            
-            double relVelX = b.getSpeed()* Math.cos(b.getOrientation()) - a.getSpeed()* Math.cos(a.getOrientation());
-            if (relVelX * dirA2B < 0.0) { // Realmente estão se aproximando e tem que mudar os ângulos        
-                aReflect = Entity.normalizeAng(Math.PI - a.getOrientation());
-                bReflect = Entity.normalizeAng(Math.PI - b.getOrientation());
-            }
+            vay = a.getSpeed() * Math.sin(a.getOrientation());
+            vby = b.getSpeed() * Math.sin(b.getOrientation());
+            // Swaps = collision of equal mass
+            vbx = a.getSpeed() * Math.cos(a.getOrientation());
+            vax = b.getSpeed() * Math.cos(b.getOrientation());
         } else {
-System.out.println("Y-coll: ");
             double dirA2B = (distY >= 0) ? 1.0 : -1.0;
             double correction = overlapY / 2.0 + 0.001;
-
             a.setY(a.getY() - dirA2B * correction);
             b.setY(b.getY() + dirA2B * correction);
-            
-            double relVelY = b.getSpeed()* Math.sin(b.getOrientation()) - a.getSpeed()* Math.sin(a.getOrientation());
-            if (relVelY * dirA2B < 0.0) { // Realmente estão se aproximando e tem que mudar os ângulos       
-                aReflect = Entity.normalizeAng(-1 * a.getOrientation());
-                bReflect = Entity.normalizeAng(-1 * b.getOrientation());
-            }
+            vax = a.getSpeed() * Math.cos(a.getOrientation());
+            vbx = b.getSpeed() * Math.cos(b.getOrientation());
+            // Swaps = collision of equal mass
+            vby = a.getSpeed() * Math.sin(a.getOrientation());
+            vay = b.getSpeed() * Math.sin(b.getOrientation());
         }
-        adAngle = 0;//((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
-        bdAngle = 0;//((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
-System.out.printf("\tA: %f -> %f -> %f\n", a.getOrientation()*180/Math.PI, aReflect*180/Math.PI, adAngle*180/Math.PI);
-System.out.printf("\tB: %f -> %f -> %f\n", b.getOrientation()*180/Math.PI, bReflect*180/Math.PI, bdAngle*180/Math.PI);
+        a.setSpeed(Math.hypot(vax, vay));
+        b.setSpeed(Math.hypot(vbx, vby));
+        aReflect = Math.atan2(vay, vax);
+        bReflect = Math.atan2(vby, vbx);
+        adAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
+        bdAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
         a.setOrientation(Entity.normalizeAng(aReflect + adAngle));
         b.setOrientation(Entity.normalizeAng(bReflect + bdAngle));
     }

@@ -93,7 +93,7 @@ public abstract class Entity {
             
             sprite = ImageIO.read(url);
         } catch (IOException e) {
-            System.err.println("Fail to read sprite file.");
+            System.err.println("Failed to read sprite file.");
             e.printStackTrace();
         }
     }
