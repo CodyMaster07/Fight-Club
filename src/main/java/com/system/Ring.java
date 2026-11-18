@@ -9,11 +9,14 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.BasicStroke;
+import java.io.Serializable;
+import java.util.Objects;
 
-public class Ring { // Singleton of the Ring
+public class Ring implements Serializable { // Singleton of the Ring
 
     private static volatile Ring instance; // Volatile is a thread-safe way to guarantee all threads read the updated data
 
+    private static final long serialVersionUID = 1L;
     private double x;
     private double y;
     
@@ -38,6 +41,30 @@ public class Ring { // Singleton of the Ring
         this.hasCollided = 0;
     }
 
+    private Ring(save.RingState state) {
+        this.x = state.x();
+        this.y = state.y();
+        this.ogX = state.originalX();
+        this.ogY = state.originalY();
+        this.width = state.width();
+        this.height = state.height();
+        this.hasCollided = state.collidedSide();
+        this.counter = state.counter();
+    }
+
+    public static Ring fromState(save.RingState state) {
+        return new Ring(state);
+    }
+
+    public save.RingState captureState() {
+        return new save.RingState(x, y, ogX, ogY, width, height, hasCollided, counter);
+    }
+
+    public static synchronized Ring newGame(double x, double y, int width, int height) {
+        instance = new Ring(x, y, width, height);
+        return instance;
+    }
+
     public static synchronized Ring init(double x, double y, int wid, int hei) {
         if (instance == null) {
             instance = new Ring(x, y, wid, hei);
@@ -50,6 +77,10 @@ public class Ring { // Singleton of the Ring
             throw new IllegalStateException("Ring is not initialized. Call Ring.init(width, height) first.");
         }
         return instance;
+    }
+
+    public static synchronized void restoreInstance(Ring restored) {
+        instance = Objects.requireNonNull(restored);
     }
 
     public double getX() {

@@ -1,5 +1,7 @@
 package com.entities;
 
+import com.system.Ring;
+import com.system.save;
 
 /**
  * @author evan.gabb
@@ -17,6 +19,7 @@ public class Boxer extends Fighter {
     
     private static final int PUNCH_DURATION = PUNCH_ANIMATION_FRAMES.length * TICKS_PER_FRAME;
     
+    private static final long serialVersionUID = 1L;
     private int punchTicksRemaining;
     
     public Boxer(double x, double y, double ort, Team team) {
@@ -24,6 +27,16 @@ public class Boxer extends Fighter {
                 DEFAULT_SPEED, DEFAULT_DURABILITY, team);
 
         loadSpriteSheet("/res/fightersheet.png", 0, 3);
+    }
+
+    public Boxer(save.EntityState state, Ring ring) {
+        super(state, ring);
+        this.punchTicksRemaining = state.punchTicksRemaining();
+    }
+
+    @Override
+    protected int capturePunchTicks() {
+        return punchTicksRemaining;
     }
 
     private boolean tryStartPunch() {

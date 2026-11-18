@@ -30,7 +30,7 @@ public class Main {
             // Ajuda
             case "-h":
             case "--help":
-                System.out.println("Usage: java -cp target/classes com.game.Main [options]\n");
+                System.out.println("Usage: mvn exec:java -Dexec.args=\"[options]\"\n");
                 System.out.println("\t-h\n\t--help\n\t\tExibe esta mensagem de ajuda.");
                 System.out.println("\t-d <largura> <altura>\n\t--display <largura> <altura>\n\t\tConfigura a resolução total da janela. Não pode ser menor que o tamanho do ringue. Padrão = 800x600.");
                 System.out.println("\t-r <largura> <altura>\n\t--ringue <largura> <altura>\n\t\tConfigura o tamanho do ringue. Padrão = 500x500.");

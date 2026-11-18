@@ -11,7 +11,7 @@ import java.util.Set;
 
 public class Input implements KeyListener, MouseListener, MouseMotionListener {
 
-    private final int frameScale;
+    private int frameScale;
 
     // Keyboard states
     private final Set<Integer> keysDown = new HashSet<>();
@@ -34,11 +34,24 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
      * Call this at the VERY END of every update tick in your loop
      * so single-frame "just pressed" / "just released" events reset.
      */
-    public void update() {
+    public synchronized void update() {
         keysJustPressed.clear();
         keysJustReleased.clear();
         mouseJustPressed = false;
         mouseJustReleased = false;
+    }
+
+    public synchronized void setFrameScale(int scale) {
+        frameScale = Math.max(1, scale);
+        reset();
+    }
+
+    public synchronized void reset() {
+        keysDown.clear();
+        keysJustPressed.clear();
+        keysJustReleased.clear();
+        mouseDown = false;
+        update();
     }
 
     // ==========================================
@@ -46,17 +59,17 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
     // ==========================================
 
     /** True on every frame the key is held down (great for fighter movement). */
-    public boolean isKeyDown(int keyCode) {
+    public synchronized boolean isKeyDown(int keyCode) {
         return keysDown.contains(keyCode);
     }
 
     /** True ONLY on the single frame the key was pressed (great for menu navigation). */
-    public boolean isKeyJustPressed(int keyCode) {
+    public synchronized boolean isKeyJustPressed(int keyCode) {
         return keysJustPressed.contains(keyCode);
     }
 
     /** True ONLY on the single frame the key was let go. */
-    public boolean isKeyJustReleased(int keyCode) {
+    public synchronized boolean isKeyJustReleased(int keyCode) {
         return keysJustReleased.contains(keyCode);
     }
 
@@ -65,34 +78,34 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
     // ==========================================
 
     /** Mouse X adjusted by frameScale to match NAT_WIDTH (0 to res[0]). */
-    public int getMouseX() {
+    public synchronized int getMouseX() {
         return mouseX;
     }
 
     /** Mouse Y adjusted by frameScale to match NAT_HEIGHT (0 to res[1]). */
-    public int getMouseY() {
+    public synchronized int getMouseY() {
         return mouseY;
     }
 
-    public boolean isMouseDown() {
+    public synchronized boolean isMouseDown() {
         return mouseDown;
     }
 
-    public boolean isMouseJustPressed() {
+    public synchronized boolean isMouseJustPressed() {
         return mouseJustPressed;
     }
 
-    public boolean isMouseJustReleased() {
+    public synchronized boolean isMouseJustReleased() {
         return mouseJustReleased;
     }
 
     /** Checks if the scaled mouse cursor is hovering inside a native-resolution Rectangle. */
-    public boolean isHovering(Rectangle bounds) {
+    public synchronized boolean isHovering(Rectangle bounds) {
         return bounds != null && bounds.contains(mouseX, mouseY);
     }
 
     /** Overload to check hover without creating a Rectangle object. */
-    public boolean isHovering(int x, int y, int width, int height) {
+    public synchronized boolean isHovering(int x, int y, int width, int height) {
         return mouseX >= x && mouseX <= x + width &&
                mouseY >= y && mouseY <= y + height;
     }
@@ -102,7 +115,7 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
     // ==========================================
 
     @Override
-    public void keyPressed(KeyEvent e) {
+    public synchronized void keyPressed(KeyEvent e) {
         int code = e.getKeyCode();
         // Only register "justPressed" if it wasn't already held down (ignores OS key-repeat)
         if (!keysDown.contains(code)) {
@@ -112,26 +125,27 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
+    public synchronized void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
         keysDown.remove(code);
         keysJustReleased.add(code);
     }
 
     @Override
-    public void mouseMoved(MouseEvent e) {
+    public synchronized void mouseMoved(MouseEvent e) {
         // Divide by frameScale so coordinates match your NAT_WIDTH x NAT_HEIGHT canvas
         this.mouseX = e.getX() / frameScale;
         this.mouseY = e.getY() / frameScale;
     }
 
     @Override
-    public void mouseDragged(MouseEvent e) {
+    public synchronized void mouseDragged(MouseEvent e) {
         mouseMoved(e);
     }
 
     @Override
-    public void mousePressed(MouseEvent e) {
+    public synchronized void mousePressed(MouseEvent e) {
+        mouseMoved(e);
         if (e.getButton() == MouseEvent.BUTTON1) {
             if (!mouseDown) {
                 mouseJustPressed = true;
@@ -141,7 +155,8 @@ public class Input implements KeyListener, MouseListener, MouseMotionListener {
     }
 
     @Override
-    public void mouseReleased(MouseEvent e) {
+    public synchronized void mouseReleased(MouseEvent e) {
+        mouseMoved(e);
         if (e.getButton() == MouseEvent.BUTTON1) {
             mouseDown = false;
             mouseJustReleased = true;

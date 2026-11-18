@@ -1,5 +1,7 @@
-test: all run
+.PHONY: all test run
+test:
+	mvn test
 all:
 	mvn compile -e
-run:
-	java -cp target/classes com.game.Main
+run: all
+	mvn exec:java

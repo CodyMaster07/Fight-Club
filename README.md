@@ -1,6 +1,30 @@
 # Fight-Club
 Trabalho de POO que consiste em fazer um jogo em JAVA
 
+Para executar com as dependências de JSON, use Java 26 ou superior e Maven:
+
+```sh
+mvn compile exec:java
+```
+
+No menu, **Play** inicia uma partida e **Load Game** carrega
+`saves/partida.json`. Durante a partida, **Q** salva o estado, mostra
+**Jogo salvo** em branco por um segundo e fecha o programa. Execute novamente
+para carregar pelo menu; o jogo não reabre automaticamente. **Esc** continua
+voltando ao menu sem salvar.
+
+A classe `com.system.save` representa o estado em JSON: entidades, times,
+posições, vida, animações, contadores de ataque, ringue, resolução, escala e
+estado dos sorteios. Os sprites são reconstruídos pelos caminhos dos recursos.
+O arquivo anterior só é substituído depois de terminar a escrita do novo save.
+Se o arquivo estiver ausente ou inválido, o menu exibe uma mensagem.
+
+Para executar os testes de salvamento e restauração:
+
+```sh
+mvn test
+```
+
 -> Descrição básica do jogo:
 https://www.youtube.com/shorts/gvmEGYI86XE
 

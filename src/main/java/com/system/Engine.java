@@ -8,25 +8,32 @@ package com.system;
 import com.entities.Boxer;
 import com.entities.Entity;
 import com.entities.Fighter;
-import com.entities.Ball;
 import com.game.Window;
 import com.game.Input;
-import com.system.Ring;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.locks.LockSupport;
 import com.entities.Bomber;
 import com.entities.Team;
  
 public class Engine implements Runnable {
     
     private Window window;
-    Random random = new Random();
+    private GameRandom random = new GameRandom();
     public static final double fps = 60.0;
     public static final double ns = 1_000_000_000 / fps;
     
-    private boolean isRunning = false;
+    private volatile boolean isRunning = false;
+    private volatile boolean exitRequested;
+    private long quitAtNanos;
+    private String statusMessage;
+    private long statusUntilNanos;
     private Thread gameThread;
     private Ring ring;
     
@@ -57,7 +64,7 @@ public class Engine implements Runnable {
         double leftX = ringX + (ringWidth - fighterWidth) * 0.25;
         double rightX = ringX + (ringWidth - fighterWidth) * 0.75;
         
-        this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
+        this.ring = Ring.newGame(ringX, ringY, ringWidth, ringHeight);
         
         for (int i = 0; i < initialPos.length; i++) {
             if (initialPos[i] == 0)
@@ -76,29 +83,64 @@ public class Engine implements Runnable {
         setActiveFighter(new Boxer(leftX, y, Math.PI / 4.0, Team.RED));
         setActiveFighter(new Bomber(rightX, y, -3.0 * Math.PI / 4.0, Team.BLUE));
     }
+
+    public Engine(Window window, save state) {
+        Ring restoredRing = Ring.fromState(state.ring());
+        List<Entity> restoredEntities = state.restoreEntities(restoredRing);
+        window.configure(state.screenWidth(), state.screenHeight(), state.frameScale());
+
+        this.window = window;
+        this.ring = restoredRing;
+        this.entities = restoredEntities;
+        this.redFighter = state.redFighterIndex() < 0 ? null
+                : (Fighter) entities.get(state.redFighterIndex());
+        this.blueFighter = state.blueFighterIndex() < 0 ? null
+                : (Fighter) entities.get(state.blueFighterIndex());
+        this.random = GameRandom.fromState(state.randomState());
+        Ring.restoreInstance(restoredRing);
+    }
+
+    /** Capture somente na thread do jogo ou enquanto a Engine estiver parada. */
+    public save captureState() {
+        return save.capture(window.getNatWidth(), window.getNatHeight(), window.getScale(),
+                ring, entities, redFighter, blueFighter, random);
+    }
+
+    public boolean isExitRequested() {
+        return exitRequested;
+    }
+
+    private void saveAndQuit() {
+        try {
+            captureState().write(save.DEFAULT_FILE);
+            statusMessage = "Jogo salvo";
+            quitAtNanos = System.nanoTime() + 1_000_000_000L;
+            exitRequested = true;
+        } catch (IOException | RuntimeException e) {
+            statusMessage = "Não foi possível salvar. Tente Q novamente.";
+            statusUntilNanos = System.nanoTime() + 4_000_000_000L;
+            e.printStackTrace();
+        }
+    }
     
     public synchronized void start() {
-        if (isRunning)
+        if (gameThread != null && gameThread.isAlive())
             return;
+        if (exitRequested) {
+            throw new IllegalStateException("Esta execução já foi encerrada");
+        }
+        window.getInput().reset();
         isRunning = true;
-        gameThread = new Thread(this);
+        gameThread = new Thread(this, "game-loop");
         gameThread.start();
     }
-    public synchronized void stop() {
-	    if (!isRunning) return;
-	    isRunning = false;
-	    // Only join if called from outside gameThread
-	    if (Thread.currentThread() != gameThread && gameThread != null) {
-	        try {
-	            gameThread.join();
-	        } catch (InterruptedException e) {
-	            Thread.currentThread().interrupt();
-	        }
-	    }
-	}
+    public void stop() {
+        isRunning = false;
+        awaitFinish();
+    }
     // Let's mainMenu waiting for game to finish
 	public void awaitFinish() {
-	    if (gameThread != null) {
+	    if (gameThread != null && Thread.currentThread() != gameThread) {
 	        try {
 	            gameThread.join();
 	        } catch (InterruptedException e) {
@@ -157,8 +199,8 @@ public class Engine implements Runnable {
         b.setSpeed(Math.hypot(vbx, vby));
         aReflect = Math.atan2(vay, vax);
         bReflect = Math.atan2(vby, vbx);
-        adAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
-        bdAngle = ((Math.random() > 0.5) ? Math.random() * Entity.maxAngleVar : -Math.random() * Entity.maxAngleVar);
+        adAngle = ((random.nextDouble() > 0.5) ? random.nextDouble() * Entity.maxAngleVar : -random.nextDouble() * Entity.maxAngleVar);
+        bdAngle = ((random.nextDouble() > 0.5) ? random.nextDouble() * Entity.maxAngleVar : -random.nextDouble() * Entity.maxAngleVar);
         a.setOrientation(Entity.normalizeAng(aReflect + adAngle));
         b.setOrientation(Entity.normalizeAng(bReflect + bdAngle));
     }
@@ -196,27 +238,49 @@ public class Engine implements Runnable {
         
         double delta = 0;
         
-        while (isRunning) {
-            long now = System.nanoTime();
-            delta += (now - lastTime) / ns;
-            lastTime = now;
-            while (delta >= 1) {
-                tick();
-                render();
-                delta--;
+        try {
+            while (isRunning) {
+                long now = System.nanoTime();
+                delta += (now - lastTime) / ns;
+                lastTime = now;
+                while (delta >= 1 && isRunning) {
+                    tick();
+                    render();
+                    delta--;
+                }
+                LockSupport.parkNanos(1_000_000L);
             }
+        } finally {
+            isRunning = false;
         }
-        stop();
     }
     
 
     public void tick() {
         Input input = window.getInput();
-    
-        if (input.isKeyJustPressed(java.awt.event.KeyEvent.VK_ESCAPE)) {
-	        isRunning = false;
-	        return;
-	}
+        boolean quit;
+        boolean backToMenu;
+        synchronized (input) {
+            quit = input.isKeyJustPressed(KeyEvent.VK_Q);
+            backToMenu = input.isKeyJustPressed(KeyEvent.VK_ESCAPE);
+            input.update();
+        }
+
+        // Depois do save, mantém exatamente a posição salva durante a mensagem.
+        if (exitRequested) {
+            if (System.nanoTime() >= quitAtNanos) {
+                isRunning = false;
+            }
+            return;
+        }
+        if (quit) {
+            saveAndQuit();
+            return;
+        }
+        if (backToMenu) {
+            isRunning = false;
+            return;
+        }
         
         for (int i = 0; i < entities.size(); i++) {
             Entity e = entities.get(i);
@@ -242,7 +306,6 @@ public class Engine implements Runnable {
         
         updateFacing();
         ring.tick();
-        input.update();
     }
     
     public void render() {
@@ -256,6 +319,19 @@ public class Engine implements Runnable {
             
             for (Entity entity : entities)
                 entity.render(g);
+            if (statusMessage != null
+                    && (exitRequested || System.nanoTime() < statusUntilNanos)) {
+                g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
+                FontMetrics metrics = g.getFontMetrics();
+                int textWidth = metrics.stringWidth(statusMessage);
+                int textX = (window.getNatWidth() - textWidth) / 2;
+                int textY = window.getNatHeight() / 2;
+                g.setColor(new Color(0, 0, 0, 190));
+                g.fillRect(textX - 12, textY - metrics.getAscent() - 8,
+                        textWidth + 24, metrics.getHeight() + 16);
+                g.setColor(Color.WHITE);
+                g.drawString(statusMessage, textX, textY);
+            }
         } finally {
             window.showFrame(g);
         }

@@ -5,16 +5,21 @@ package com.entities;
  * @author dleskow
  */
 import com.system.Ring;
+import com.system.GameRandom;
+import com.system.save;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashSet;
+import java.io.Serializable;
+import java.io.ObjectInputStream;
 import javax.imageio.ImageIO;
 
-public abstract class Entity {
+public abstract class Entity implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+    private String sprite_path;
     public static final double maxAngleVar = Math.PI / 12.0;
     
     // Basic attributes
@@ -27,20 +32,21 @@ public abstract class Entity {
     private int spriteScale;
     
     private int durability;
-    
+    private final GameRandom random;
     private Ring ring;
     
     private int counter;
     private double rand1;
     private double rand2;
     
-    protected BufferedImage sprite;
+    protected transient BufferedImage sprite;
 
     public Entity(double x, double y, double ort, int maskW, int maskH, double spd, int dur, int spriteScale) {
         if (spriteScale < 1) {
             throw new IllegalArgumentException("A escala deve ser maior ou igual a 1.");
         }
         
+        this.random = new GameRandom();
         this.spriteScale = spriteScale;
         
         this.x = x;
@@ -53,8 +59,8 @@ public abstract class Entity {
         this.durability = dur;
         
         this.counter = 0;
-        this.rand1 = Math.random();
-        this.rand2 = Math.random();
+        this.rand1 = random.nextDouble();
+        this.rand2 = random.nextDouble();
         this.ring = Ring.instance();
     }
     
@@ -63,6 +69,7 @@ public abstract class Entity {
     }
     
     public Entity(double x, double y, double ort, double spd, String file_path) { // Construtor usado em ball que não carrega spritesheet
+        this.random = new GameRandom();
         this.spriteScale = 1;
         
         this.x = x;
@@ -72,13 +79,48 @@ public abstract class Entity {
         this.durability = 1;
         
         this.counter = 0;
-        this.rand1 = Math.random();
-        this.rand2 = Math.random();
+        this.rand1 = random.nextDouble();
+        this.rand2 = random.nextDouble();
         this.ring = Ring.instance();
         
         loadSprite(file_path);
         this.maskWidth = getRenderWidth();
         this.maskHeight = getRenderHeight();
+    }
+
+    /** Reconstrói os atributos sem executar a inicialização de uma partida nova. */
+    protected Entity(save.EntityState state, Ring ring) {
+        this.x = state.x();
+        this.y = state.y();
+        this.orientation = state.orientation();
+        this.maskWidth = state.maskWidth();
+        this.maskHeight = state.maskHeight();
+        this.speed = state.speed();
+        this.durability = state.durability();
+        this.spriteScale = state.spriteScale();
+        this.counter = state.counter();
+        this.rand1 = state.rand1();
+        this.rand2 = state.rand2();
+        this.random = GameRandom.fromState(state.randomState());
+        this.ring = java.util.Objects.requireNonNull(ring);
+        if (state.spritePath() != null) {
+            loadSprite(state.spritePath());
+        }
+    }
+
+    public final save.EntityState captureState() {
+        return new save.EntityState(getClass().getSimpleName(), x, y, orientation,
+                maskWidth, maskHeight, speed, durability, spriteScale, counter,
+                rand1, rand2, random.getState(), sprite_path,
+                captureFighterState(), capturePunchTicks());
+    }
+
+    protected save.FighterState captureFighterState() {
+        return null;
+    }
+
+    protected int capturePunchTicks() {
+        return 0;
     }
 
 
@@ -87,16 +129,34 @@ public abstract class Entity {
         try {
             URL url = getClass().getResource(file_path);
             if (url == null) {
-                System.err.println("Error: sprite not found");
-                return;
+                throw new IOException("Sprite não encontrada: " + file_path);
             }
             
-            sprite = ImageIO.read(url);
+            BufferedImage loaded_sprite = ImageIO.read(url);
+            if (loaded_sprite == null) {
+                throw new IOException("Imagem inválida " + file_path);
+            }
+            sprite = loaded_sprite;
+            sprite_path = file_path;
+
         } catch (IOException e) {
-            System.err.println("Failed to read sprite file.");
-            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível carregar: " + file_path, e);
         }
     }
+
+    private void readObject(ObjectInputStream input)
+            throws IOException, ClassNotFoundException {
+        input.defaultReadObject();
+
+        if (sprite_path != null) {
+            try {
+                loadSprite(sprite_path);
+            } catch (RuntimeException e) {
+                throw new IOException("Não foi possível recarregar o sprite", e);
+            }
+        }
+    }
+
     // Getters
     public double getX() { return x; }
     public double getY() { return y; }
@@ -138,8 +198,8 @@ public abstract class Entity {
         counter++;
         if (counter >= 20) {
             counter = 0;
-            rand1 = Math.random();
-            rand2 = Math.random();
+            rand1 = random.nextDouble();
+            rand2 = random.nextDouble();
         }
         
         double maxX = ring.getX() + ring.getWidth() - this.maskWidth;

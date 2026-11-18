@@ -1,12 +1,15 @@
 package com.game;
 
 import com.system.Engine;
+import com.system.save;
 import com.game.Input;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +27,7 @@ public class mainMenu {
     private int frameScale;
     private int[] players;
     private int[] initialPos;
+    private String menuMessage;
 
     public mainMenu(int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
         this.window = new Window("Fight Club Game", res, frameScale);
@@ -36,31 +40,53 @@ public class mainMenu {
     }
 
     public void handleMenus() {
-        while (true) {
-            switch (menu) {
-                case MAIN:
-                default:
-                    menu = showMainMenu();
-                    break;
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                switch (menu) {
+                    case MAIN:
+                    default:
+                        menu = showMainMenu();
+                        break;
 
-                case GAME:
-				    Engine engine = new Engine(window, res, ring, frameScale, players, initialPos);
-				    engine.start();
-				    engine.awaitFinish(); // Waits here while gameThread is active
-				    menu = Menu.MAIN;     // Returns to Main Menu
-				    break;
+                    case GAME:
+                        menuMessage = null;
+                        if (runGame(new Engine(window, res, ring, frameScale, players, initialPos))) {
+                            return;
+                        }
+                        menu = Menu.MAIN;
+                        break;
 
-                case LOAD:
-                    // Save.load(); // To be implemented later
-                    menu = Menu.MAIN;
-                    break;
+                    case LOAD:
+                        try {
+                            menuMessage = null;
+                            save state = save.read(save.DEFAULT_FILE);
+                            if (runGame(new Engine(window, state))) {
+                                return;
+                            }
+                        } catch (NoSuchFileException e) {
+                            menuMessage = "Nenhum jogo salvo. Aperte Q durante uma partida.";
+                        } catch (IOException | RuntimeException e) {
+                            menuMessage = "Não foi possível carregar o save.";
+                            e.printStackTrace();
+                        }
+                        menu = Menu.MAIN;
+                        break;
 
-                case CHARACTER_SELECT:
-                    // To be implemented later
-                    menu = Menu.MAIN;
-                    break;
+                    case CHARACTER_SELECT:
+                        // To be implemented later
+                        menu = Menu.MAIN;
+                        break;
+                }
             }
+        } finally {
+            window.close();
         }
+    }
+
+    private boolean runGame(Engine engine) {
+        engine.start();
+        engine.awaitFinish();
+        return engine.isExitRequested();
     }
 
     private Menu showMainMenu() {
@@ -85,63 +111,65 @@ public class mainMenu {
         buttons.add(new Button(btnX, startY + spacing, btnWidth, btnHeight, "Select Characters", () -> {
             // Empty for now (later: nextMenu[0] = Menu.CHARACTER_SELECT;)
         }));
-        buttons.add(new Button(btnX, startY + spacing * 2, btnWidth, btnHeight, "Load", () -> {
-            // Empty for now (later: Save.load();)
+        buttons.add(new Button(btnX, startY + spacing * 2, btnWidth, btnHeight, "Load Game", () -> {
+            nextMenu[0] = Menu.LOAD;
         }));
 
         int selectedIndex = -1; // -1 means no button is currently selected
         int lastMouseX = input.getMouseX();
         int lastMouseY = input.getMouseY();
 
-        while (nextMenu[0] == null) {
-            // --- 1. UPDATE INPUT ---
-            int mx = input.getMouseX();
-            int my = input.getMouseY();
-            boolean mouseMoved = (mx != lastMouseX || my != lastMouseY);
-            lastMouseX = mx;
-            lastMouseY = my;
+        while (nextMenu[0] == null && !Thread.currentThread().isInterrupted()) {
+            synchronized (input) {
+                // --- 1. UPDATE INPUT ---
+                int mx = input.getMouseX();
+                int my = input.getMouseY();
+                boolean mouseMoved = (mx != lastMouseX || my != lastMouseY);
+                lastMouseX = mx;
+                lastMouseY = my;
 
-            // Mouse hover detection (only overrides keyboard if mouse actually moved)
-            if (mouseMoved) {
-                selectedIndex = -1;
-                for (int i = 0; i < buttons.size(); i++) {
-                    if (input.isHovering(buttons.get(i).bounds)) {
-                        selectedIndex = i;
-                        break;
+                // Mouse hover detection (only overrides keyboard if mouse actually moved)
+                if (mouseMoved) {
+                    selectedIndex = -1;
+                    for (int i = 0; i < buttons.size(); i++) {
+                        if (input.isHovering(buttons.get(i).bounds)) {
+                            selectedIndex = i;
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Mouse click on hovered button
-            if (input.isMouseJustPressed()) {
-                for (int i = 0; i < buttons.size(); i++) {
-                    if (input.isHovering(buttons.get(i).bounds)) {
-                        buttons.get(i).execute();
-                        break;
+                // Mouse click on hovered button
+                if (input.isMouseJustPressed()) {
+                    for (int i = 0; i < buttons.size(); i++) {
+                        if (input.isHovering(buttons.get(i).bounds)) {
+                            buttons.get(i).execute();
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Keyboard arrow navigation
-            boolean nextKey = input.isKeyJustPressed(KeyEvent.VK_UP) || input.isKeyJustPressed(KeyEvent.VK_RIGHT);
-            boolean prevKey = input.isKeyJustPressed(KeyEvent.VK_DOWN) || input.isKeyJustPressed(KeyEvent.VK_LEFT);
+                // Keyboard arrow navigation
+                boolean nextKey = input.isKeyJustPressed(KeyEvent.VK_UP) || input.isKeyJustPressed(KeyEvent.VK_RIGHT);
+                boolean prevKey = input.isKeyJustPressed(KeyEvent.VK_DOWN) || input.isKeyJustPressed(KeyEvent.VK_LEFT);
 
-            if (nextKey || prevKey) {
-                if (selectedIndex == -1) {
-                    selectedIndex = 0; // Select first button if none selected
-                } else if (nextKey) {
-                    selectedIndex = (selectedIndex + 1) % buttons.size(); // Next (below)
-                } else {
-                    selectedIndex = (selectedIndex - 1 + buttons.size()) % buttons.size(); // Previous (above)
+                if (nextKey || prevKey) {
+                    if (selectedIndex == -1) {
+                        selectedIndex = 0; // Select first button if none selected
+                    } else if (nextKey) {
+                        selectedIndex = (selectedIndex + 1) % buttons.size(); // Next (below)
+                    } else {
+                        selectedIndex = (selectedIndex - 1 + buttons.size()) % buttons.size(); // Previous (above)
+                    }
                 }
-            }
 
-            // Enter triggers currently selected button
-            if (input.isKeyJustPressed(KeyEvent.VK_ENTER) && selectedIndex != -1) {
-                buttons.get(selectedIndex).execute();
-            }
+                // Enter triggers currently selected button
+                if (input.isKeyJustPressed(KeyEvent.VK_ENTER) && selectedIndex != -1) {
+                    buttons.get(selectedIndex).execute();
+                }
 
-            input.update(); // Reset single-frame key/mouse events
+                input.update(); // Reset single-frame key/mouse events
+            }
 
             // --- 2. RENDER ---
             Graphics2D g = window.beginFrame();
@@ -190,6 +218,13 @@ public class mainMenu {
             int textX = btn.bounds.x + (btn.bounds.width - btnFm.stringWidth(btn.label)) / 2;
             int textY = btn.bounds.y + ((btn.bounds.height - btnFm.getHeight()) / 2) + btnFm.getAscent();
             g.drawString(btn.label, textX, textY);
+        }
+
+        if (menuMessage != null) {
+            g.setColor(Color.WHITE);
+            g.drawString(menuMessage,
+                    (width - g.getFontMetrics().stringWidth(menuMessage)) / 2,
+                    height / 2 + 110);
         }
     }
 }

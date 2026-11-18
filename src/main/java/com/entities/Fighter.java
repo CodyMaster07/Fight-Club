@@ -1,5 +1,7 @@
 package com.entities;
 
+import com.system.Ring;
+import com.system.save;
 import java.io.IOException;
 import java.net.URL;
 import javax.imageio.ImageIO;
@@ -8,6 +10,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.io.ObjectInputStream;
 
 /**
  * @author evan.gabb
@@ -15,6 +18,11 @@ import java.awt.Graphics;
  */
 public abstract class Fighter extends Entity {
     
+    private static final long serialVersionUID = 1L;
+
+    private String spritesheet_path;
+    private int spriteFirstRow;
+
     private static final int TICKS_OF_FLASHING = 12;
     
     private static final int F_WIDTH = 34;
@@ -30,7 +38,7 @@ public abstract class Fighter extends Entity {
     
     private static final Font HEALTH_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
     
-    private BufferedImage[][] sprites;
+    private transient BufferedImage[][] sprites;
     private final Team team;
     private boolean isLeft;
     
@@ -38,6 +46,26 @@ public abstract class Fighter extends Entity {
         super(x, y, ort, maskWidth, maskHeight, speed, durability, 2);
         this.maxDurability = durability;
         this.team = java.util.Objects.requireNonNull(team, "Time obrigatório");
+    }
+
+    protected Fighter(save.EntityState state, Ring ring) {
+        super(state, ring);
+        save.FighterState fighter = state.fighter();
+        this.maxDurability = fighter.maxDurability();
+        this.team = fighter.team();
+        this.isLeft = fighter.isLeft();
+        this.damageFlashTicks = fighter.damageFlashTicks();
+        this.pendingDamage = fighter.pendingDamage();
+        loadSpriteSheet(fighter.spriteSheetPath(), fighter.spriteFirstRow(),
+                fighter.normalFrameCount());
+        setAnimationFrame(fighter.animationFrame());
+    }
+
+    @Override
+    protected save.FighterState captureFighterState() {
+        return new save.FighterState(team, isLeft, maxDurability, normalFrameCount,
+                animationFrame, damageFlashTicks, pendingDamage,
+                spritesheet_path, spriteFirstRow);
     }
     
     public Team getTeam() {
@@ -48,14 +76,14 @@ public abstract class Fighter extends Entity {
         return isLeft;
     }
     
-    protected void loadSpriteSheet(String spritePath, int firstRow, int frameCount) {
+    protected void loadSpriteSheet(String sprite_path, int firstRow, int frameCount) {
         if (firstRow < 0 || frameCount <= 0) {
             throw new IllegalArgumentException("Linha ou quantidade de quadros inválida");
         }
 
-        URL url = getClass().getResource(spritePath);
+        URL url = getClass().getResource(sprite_path);
         if (url == null) {
-            throw new IllegalStateException("Sprite não encontrada: " + spritePath);
+            throw new IllegalStateException("Sprite não encontrada: " + sprite_path);
         }
 
         try {
@@ -65,7 +93,7 @@ public abstract class Fighter extends Entity {
             if (sheet == null
                     || sheet.getWidth() < columns * F_WIDTH
                     || sheet.getHeight() < (firstRow + 4) * F_HEIGHT) {
-                throw new IllegalStateException("Spritesheet inválida: " + spritePath);
+                throw new IllegalStateException("Spritesheet inválida: " + sprite_path);
             }
 
             sprites = new BufferedImage[4][columns];
@@ -79,11 +107,32 @@ public abstract class Fighter extends Entity {
                             F_HEIGHT);
                 }
             }
-
+            spritesheet_path = sprite_path;
+            spriteFirstRow = firstRow;
             normalFrameCount = frameCount;
             setAnimationFrame(0);
         } catch (IOException e) {
-            throw new IllegalStateException("Não foi possível carregar: " + spritePath, e);
+            throw new IllegalStateException("Não foi possível carregar: " + sprite_path, e);
+        }
+    }
+
+    private void readObject(ObjectInputStream input)
+           throws IOException, ClassNotFoundException {
+
+        input.defaultReadObject();
+
+        int savedFrame = animationFrame;
+
+        try {
+            loadSpriteSheet(
+                    spritesheet_path,
+                    spriteFirstRow,
+                    normalFrameCount);
+
+            setAnimationFrame(savedFrame);
+        } catch (RuntimeException e) {
+            throw new IOException(
+                    "Não foi possível restaurar a spritesheet", e);
         }
     }
     
