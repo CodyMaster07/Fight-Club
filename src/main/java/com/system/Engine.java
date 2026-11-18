@@ -16,6 +16,8 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import com.entities.Bomber;
+import com.entities.Team;
  
 public class Engine implements Runnable {
     
@@ -29,9 +31,13 @@ public class Engine implements Runnable {
     private Ring ring;
     
     private List<Entity> entities;
-    
+    private Fighter redFighter;
+    private Fighter blueFighter;
+
     public Engine (Window window, int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
-		this.window = window;
+	this.window = window;
+    
+    
         entities = new ArrayList<>();
         
         double[][] posPos = { {100.0, -100.0}, {-100.0, -100.0}, {-100.0, 100.0}, {100.0, 100.0} };
@@ -45,6 +51,12 @@ public class Engine implements Runnable {
         double centerX = window.getNatWidth() / 2.0;
         double centerY = window.getNatHeight() / 2.0;
         
+        double fighterWidth = 34 * 2;
+        double fighterHeight = 34 * 2;
+        double y = ringY + (ringHeight - fighterHeight) / 2.0;
+        double leftX = ringX + (ringWidth - fighterWidth) * 0.25;
+        double rightX = ringX + (ringWidth - fighterWidth) * 0.75;
+        
         this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
         for (int i = 0; i < initialPos.length; i++) {
@@ -52,14 +64,17 @@ public class Engine implements Runnable {
                 initialPos[i] = random.nextInt(1, 5);
         }
         
-        int n_entity = 0;
-        for (int i = 0; i < players[0]; i++) {
-            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
-            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
-        }
-        for (int i = 0; i < players[1]; i++) {
-            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
-        }
+//        int n_entity = 0;
+//        for (int i = 0; i < players[0]; i++) {
+//            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
+//            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
+//        }
+//        for (int i = 0; i < players[1]; i++) {
+//            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
+//        }
+        
+        setActiveFighter(new Boxer(leftX, y, Math.PI / 4.0, Team.RED));
+        setActiveFighter(new Bomber(rightX, y, -3.0 * Math.PI / 4.0, Team.BLUE));
     }
     
     public synchronized void start() {
@@ -148,6 +163,32 @@ public class Engine implements Runnable {
         b.setOrientation(Entity.normalizeAng(bReflect + bdAngle));
     }
     
+    private void setActiveFighter(Fighter next) {
+        if (next == null || next.isKO()) {
+            throw new IllegalArgumentException("O lutador deve estar vivo");
+        }
+
+        if (next.getTeam() == Team.RED) {
+            entities.remove(redFighter);
+            redFighter = next;
+        } else {
+            entities.remove(blueFighter);
+            blueFighter = next;
+        }
+
+        entities.add(next);
+        updateFacing();
+    }
+
+    private void updateFacing() {
+        if (redFighter == null || blueFighter == null) {
+            return;
+        }
+
+        redFighter.faceOpponent(blueFighter);
+        blueFighter.faceOpponent(redFighter);
+    }
+    
     @Override 
     public void run() {
         // Configuração para ter 60 ticks por segundo (60 FPS)
@@ -168,33 +209,41 @@ public class Engine implements Runnable {
         stop();
     }
     
-	public void tick() {
-	    Input input = window.getInput();
-	
-	    // Example: Press ESC to end match and go back to Main Menu
-	    if (input.isKeyJustPressed(java.awt.event.KeyEvent.VK_ESCAPE)) {
+
+    public void tick() {
+        Input input = window.getInput();
+    
+        if (input.isKeyJustPressed(java.awt.event.KeyEvent.VK_ESCAPE)) {
 	        isRunning = false;
 	        return;
-	    }
-	
-	    for (int i = 0; i < entities.size(); i++) {
-	        Entity e = entities.get(i);
-	        e.tick();
-	    }
-	    checkEntitiesCollision();
-	
-	    for (Entity entity : entities) {
-	        if (entity instanceof Fighter fighter) {
-	            fighter.applyPendingDamage();
-	        }
-	    }
-	
-	    entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
-	    ring.tick();
-	
-	    // IMPORTANT: Clear single-frame inputs at the end of every tick
-	    input.update();
 	}
+        
+        for (int i = 0; i < entities.size(); i++) {
+            Entity e = entities.get(i);
+            e.tick();
+        }
+        checkEntitiesCollision(); // Aqui os danos são registrados mas ficam pendentes
+
+
+        for (Entity entity : entities) {
+            if (entity instanceof Fighter fighter) {
+                fighter.applyPendingDamage();
+            }
+        }
+
+        entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
+        
+        if (redFighter != null && redFighter.isKO()) {
+            redFighter = null;
+        }
+        if (blueFighter != null && blueFighter.isKO()) {
+            blueFighter = null;
+        }
+        
+        updateFacing();
+        ring.tick();
+        input.update();
+    }
     
     public void render() {
         Graphics2D g = window.beginFrame();

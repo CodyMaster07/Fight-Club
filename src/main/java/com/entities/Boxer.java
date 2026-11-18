@@ -1,9 +1,5 @@
 package com.entities;
 
-import java.io.IOException;
-import java.net.URL;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 
 /**
  * @author evan.gabb
@@ -23,10 +19,11 @@ public class Boxer extends Fighter {
     
     private int punchTicksRemaining;
     
-    public Boxer(double x, double y, double ort) {
-        super(x, y, ort, MASK_WIDTH, MASK_HEIGHT, DEFAULT_SPEED, DEFAULT_DURABILITY);
-        
-        loadSpriteSheet("/res/fightersprite.png", 3);
+    public Boxer(double x, double y, double ort, Team team) {
+        super(x, y, ort, MASK_WIDTH, MASK_HEIGHT,
+                DEFAULT_SPEED, DEFAULT_DURABILITY, team);
+
+        loadSpriteSheet("/res/fightersheet.png", 0, 3);
     }
 
     private boolean tryStartPunch() {

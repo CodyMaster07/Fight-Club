@@ -17,8 +17,6 @@ public abstract class Fighter extends Entity {
     
     private static final int TICKS_OF_FLASHING = 12;
     
-    
-    private int totalFrames = 6;
     private static final int F_WIDTH = 34;
     private static final int F_HEIGHT = 34;
     private int normalFrameCount;
@@ -29,43 +27,64 @@ public abstract class Fighter extends Entity {
     private static final int HEALTH_BAR_WIDTH = 36;
     private static final int HEALTH_BAR_HEIGHT = 12;
     private static final int HEALTH_BAR_GAP = 4;
-    private static final int SPRITE_SCALE = 2;
     
     private static final Font HEALTH_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
     
-    private BufferedImage[] sprites;
+    private BufferedImage[][] sprites;
+    private final Team team;
+    private boolean isLeft;
     
-    public Fighter(double x, double y, double ort, int maskWidth, int maskHeight, double speed, int durability) {
+    public Fighter(double x, double y, double ort, int maskWidth, int maskHeight, double speed, int durability, Team team) {
         super(x, y, ort, maskWidth, maskHeight, speed, durability, 2);
         this.maxDurability = durability;
+        this.team = java.util.Objects.requireNonNull(team, "Time obrigatório");
     }
     
-    protected void loadSpriteSheet(String sprite_path, int frameCount) {
-        if (frameCount <= 0) {
-            throw new IllegalArgumentException("Quantidade de Frames não pode ser negativa");
+    public Team getTeam() {
+        return team;
+    }
+
+    public boolean isLeft() {
+        return isLeft;
+    }
+    
+    protected void loadSpriteSheet(String spritePath, int firstRow, int frameCount) {
+        if (firstRow < 0 || frameCount <= 0) {
+            throw new IllegalArgumentException("Linha ou quantidade de quadros inválida");
         }
-        
+
+        URL url = getClass().getResource(spritePath);
+        if (url == null) {
+            throw new IllegalStateException("Sprite não encontrada: " + spritePath);
+        }
+
         try {
-            URL url = getClass().getResource(sprite_path);
-            if (url == null) {
-                System.err.println("Error: sprite not found");
-                return;
-            }
-            
             BufferedImage sheet = ImageIO.read(url);
-            
-            this.sprites = new BufferedImage[totalFrames];
-            
-            for (int i = 0; i < totalFrames; i++) {
-                this.sprites[i] = sheet.getSubimage(i * F_WIDTH, 0, F_WIDTH, F_HEIGHT);
+            int columns = frameCount * 2;
+
+            if (sheet == null
+                    || sheet.getWidth() < columns * F_WIDTH
+                    || sheet.getHeight() < (firstRow + 4) * F_HEIGHT) {
+                throw new IllegalStateException("Spritesheet inválida: " + spritePath);
             }
-            
-        this.normalFrameCount = frameCount;
-        setAnimationFrame(0);
-        
+
+            sprites = new BufferedImage[4][columns];
+
+            for (int row = 0; row < 4; row++) {
+                for (int column = 0; column < columns; column++) {
+                    sprites[row][column] = sheet.getSubimage(
+                            column * F_WIDTH,
+                            (firstRow + row) * F_HEIGHT,
+                            F_WIDTH,
+                            F_HEIGHT);
+                }
+            }
+
+            normalFrameCount = frameCount;
+            setAnimationFrame(0);
         } catch (IOException e) {
-            throw new IllegalStateException("Não foi possível carregar: "+ sprite_path, e);
-        }    
+            throw new IllegalStateException("Não foi possível carregar: " + spritePath, e);
+        }
     }
     
     public boolean isKO() {
@@ -85,9 +104,22 @@ public abstract class Fighter extends Entity {
         if (sprites == null) {
             return;
         }
-        
-        int spriteOffset = damageFlashTicks > 0 ? normalFrameCount : 0; // Se estiver sofrendo o flash do dano, vai carregar a sprite de flash equivalente ao quadro atual;
-        sprite = sprites[animationFrame + spriteOffset];
+
+        int row = team.getRowOffset() + (isLeft ? 1 : 0);
+        boolean damaged = damageFlashTicks > 0;
+        int column;
+
+        if (isLeft) {
+            int lastColumn = damaged
+                    ? normalFrameCount - 1       // 2: dano começa pelo último quadro
+                    : normalFrameCount * 2 - 1; // 5: normal começa pelo último quadro
+            column = lastColumn - animationFrame;
+        } else {
+            int offset = damaged ? normalFrameCount : 0;
+            column = offset + animationFrame;
+        }
+
+        sprite = sprites[row][column];
     }
     
     protected void takeDamage(int damage) {
@@ -113,6 +145,26 @@ public abstract class Fighter extends Entity {
         updateSprite();
         
     }   
+    
+    public void faceOpponent(Fighter opponent) {
+        if (opponent == null || opponent == this || opponent.getTeam() == team) {
+            return;
+        }
+
+        double myCenterX = getX() + getRenderWidth() / 2.0;
+        double opponentCenterX = opponent.getX() + opponent.getRenderWidth() / 2.0;
+
+        // Na mesma coordenada horizontal, preserva a direção anterior.
+        if (myCenterX == opponentCenterX) {
+            return;
+        }
+
+        boolean nextIsLeft = opponentCenterX < myCenterX;
+        if (isLeft != nextIsLeft) {
+            isLeft = nextIsLeft;
+            updateSprite();
+        }
+    }
     
     @Override
     public void tick() {
