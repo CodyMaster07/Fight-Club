@@ -1,8 +1,8 @@
 package com.system;
 
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 
 import com.entities.Boxer;
@@ -10,6 +10,7 @@ import com.entities.Entity;
 import com.entities.Fighter;
 import com.entities.Ball;
 import com.game.Window;
+import com.game.Input;
 import com.system.Ring;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -18,20 +19,20 @@ import java.util.Random;
  
 public class Engine implements Runnable {
     
+    private Window window;
     Random random = new Random();
     public static final double fps = 60.0;
     public static final double ns = 1_000_000_000 / fps;
     
     private boolean isRunning = false;
     private Thread gameThread;
-    private Window window;
     private Ring ring;
     
     private List<Entity> entities;
     
-    public Engine (int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
+    public Engine (Window window, int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
+		this.window = window;
         entities = new ArrayList<>();
-        window = new Window("Fight Club Game", res, frameScale);
         
         double[][] posPos = { {100.0, -100.0}, {-100.0, -100.0}, {-100.0, 100.0}, {100.0, 100.0} };
         
@@ -68,16 +69,28 @@ public class Engine implements Runnable {
         gameThread = new Thread(this);
         gameThread.start();
     }
-    
     public synchronized void stop() {
-        isRunning = false;
-        try {
-            gameThread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    
+	    if (!isRunning) return;
+	    isRunning = false;
+	    // Only join if called from outside gameThread
+	    if (Thread.currentThread() != gameThread && gameThread != null) {
+	        try {
+	            gameThread.join();
+	        } catch (InterruptedException e) {
+	            Thread.currentThread().interrupt();
+	        }
+	    }
+	}
+    // Let's mainMenu waiting for game to finish
+	public void awaitFinish() {
+	    if (gameThread != null) {
+	        try {
+	            gameThread.join();
+	        } catch (InterruptedException e) {
+	            Thread.currentThread().interrupt();
+	        }
+	    }
+	}
     private void checkEntitiesCollision() {
         for (int i = 0; i < entities.size(); i++) {
             Entity a = entities.get(i);
@@ -155,23 +168,33 @@ public class Engine implements Runnable {
         stop();
     }
     
-    public void tick() {
-        for (int i = 0; i < entities.size(); i++) {
-            Entity e = entities.get(i);
-            e.tick();
-        }
-        checkEntitiesCollision(); // Aqui os danos são registrados mas ficam pendentes
-
-
-        for (Entity entity : entities) {
-            if (entity instanceof Fighter fighter) {
-                fighter.applyPendingDamage();
-            }
-        }
-
-        entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
-        ring.tick();
-    }
+	public void tick() {
+	    Input input = window.getInput();
+	
+	    // Example: Press ESC to end match and go back to Main Menu
+	    if (input.isKeyJustPressed(java.awt.event.KeyEvent.VK_ESCAPE)) {
+	        isRunning = false;
+	        return;
+	    }
+	
+	    for (int i = 0; i < entities.size(); i++) {
+	        Entity e = entities.get(i);
+	        e.tick();
+	    }
+	    checkEntitiesCollision();
+	
+	    for (Entity entity : entities) {
+	        if (entity instanceof Fighter fighter) {
+	            fighter.applyPendingDamage();
+	        }
+	    }
+	
+	    entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
+	    ring.tick();
+	
+	    // IMPORTANT: Clear single-frame inputs at the end of every tick
+	    input.update();
+	}
     
     public void render() {
         Graphics2D g = window.beginFrame();

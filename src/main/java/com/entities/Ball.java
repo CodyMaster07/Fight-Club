@@ -1,7 +1,6 @@
 package com.entities;
 import com.entities.Entity;
 /**
- *
  * @author evan.gabb
  * @author dleskow
  */

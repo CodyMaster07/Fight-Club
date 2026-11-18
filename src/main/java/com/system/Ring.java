@@ -1,8 +1,8 @@
 package com.system;
 
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 
 import java.awt.Color;
@@ -80,10 +80,10 @@ public class Ring { // Singleton of the Ring
         if (hasCollided > 0) {
             if (counter < 2) {
                 switch (hasCollided) {
-                    case 1 -> this.y -= 3.0;
-                    case 2 -> this.x += 3.0;
-                    case 3 -> this.y += 3.0;
-                    case 4 -> this.x -= 3.0;
+                    case 1 -> this.y -= 1.0;
+                    case 2 -> this.x += 1.0;
+                    case 3 -> this.y += 1.0;
+                    case 4 -> this.x -= 1.0;
                 }
             }
             counter++;

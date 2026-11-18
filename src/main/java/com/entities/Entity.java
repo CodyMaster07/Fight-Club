@@ -1,8 +1,8 @@
 package com.entities;
 
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 import com.system.Ring;
 import java.awt.Color;

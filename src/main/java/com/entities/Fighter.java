@@ -10,8 +10,8 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 public abstract class Fighter extends Entity {
     

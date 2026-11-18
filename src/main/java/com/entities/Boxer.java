@@ -6,8 +6,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 public class Boxer extends Fighter {
     private static final int DEFAULT_DURABILITY = 100;

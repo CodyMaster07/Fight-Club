@@ -7,10 +7,12 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferStrategy;
 /**
- *
  * @author evan.gabb
+ * @author dleskow
  */
 public class Window {
+
+	private Input input;
     
     private Canvas canvas;
     private JFrame frame;
@@ -29,8 +31,6 @@ public class Window {
         canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(NAT_WIDTH*scale, NAT_HEIGHT*scale));
 
-        canvas.setFocusable(false); // Deixa o foco do teclado no JFrame
-        
         frame = new JFrame(title);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
@@ -38,11 +38,22 @@ public class Window {
         frame.pack(); // Ajusta as bordas
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+		this.input = new Input(scale);
+		canvas.addKeyListener(input);
+		canvas.addMouseListener(input);
+		canvas.addMouseMotionListener(input);
+		canvas.setFocusable(true);
+		canvas.requestFocus();
     }
 
     public Canvas getCanvas() {
         return canvas;
     }
+
+	public Input getInput() {
+	    return input;
+	}
 
     public int getNatWidth() { return NAT_WIDTH; }
     public int getNatHeight() { return NAT_HEIGHT; }
