@@ -10,7 +10,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
-import java.io.ObjectInputStream;
 
 /**
  * @author evan.gabb
@@ -18,8 +17,6 @@ import java.io.ObjectInputStream;
  */
 public abstract class Fighter extends Entity {
     
-    private static final long serialVersionUID = 1L;
-
     private String spritesheet_path;
     private int spriteFirstRow;
 
@@ -38,7 +35,7 @@ public abstract class Fighter extends Entity {
     
     private static final Font HEALTH_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
     
-    private transient BufferedImage[][] sprites;
+    private BufferedImage[][] sprites;
     private final Team team;
     private boolean isLeft;
     
@@ -116,26 +113,6 @@ public abstract class Fighter extends Entity {
         }
     }
 
-    private void readObject(ObjectInputStream input)
-           throws IOException, ClassNotFoundException {
-
-        input.defaultReadObject();
-
-        int savedFrame = animationFrame;
-
-        try {
-            loadSpriteSheet(
-                    spritesheet_path,
-                    spriteFirstRow,
-                    normalFrameCount);
-
-            setAnimationFrame(savedFrame);
-        } catch (RuntimeException e) {
-            throw new IOException(
-                    "Não foi possível restaurar a spritesheet", e);
-        }
-    }
-    
     public boolean isKO() {
         return getDurability() == 0;
     }

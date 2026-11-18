@@ -9,14 +9,12 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.BasicStroke;
-import java.io.Serializable;
 import java.util.Objects;
 
-public class Ring implements Serializable { // Singleton of the Ring
+public class Ring { // Singleton of the Ring
 
     private static volatile Ring instance; // Volatile is a thread-safe way to guarantee all threads read the updated data
 
-    private static final long serialVersionUID = 1L;
     private double x;
     private double y;
     

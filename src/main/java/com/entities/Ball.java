@@ -8,8 +8,6 @@ import com.system.save;
  */
 
 public class Ball extends Entity {
-    private static final long serialVersionUID = 1L;
-
     public Ball (double x, double y, double ort, double spd, String file_path) {
         super(x, y, ort, spd, file_path);
     }

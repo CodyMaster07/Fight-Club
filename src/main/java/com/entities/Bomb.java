@@ -10,7 +10,6 @@ import com.system.save;
 
 public class Bomb extends Entity {
 
-    private static final long serialVersionUID = 1L;
     public Bomb (double x, double y, double ort, double spd, String file_path) {
         super(x, y, ort, spd, file_path);
     }

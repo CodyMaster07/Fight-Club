@@ -1,11 +1,9 @@
 package com.system;
 
-import java.io.Serializable;
 import java.util.Random;
 
 /** Gerador com estado explícito para continuar os mesmos sorteios após um load. */
-public final class GameRandom implements Serializable {
-    private static final long serialVersionUID = 1L;
+public final class GameRandom {
     private static final long MULTIPLIER = 0x5DEECE66DL;
     private static final long MASK = (1L << 48) - 1;
     private long state;

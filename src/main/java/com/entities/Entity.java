@@ -12,13 +12,10 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.io.Serializable;
-import java.io.ObjectInputStream;
 import javax.imageio.ImageIO;
 
-public abstract class Entity implements Serializable {
+public abstract class Entity {
 
-    private static final long serialVersionUID = 1L;
     private String sprite_path;
     public static final double maxAngleVar = Math.PI / 12.0;
     
@@ -39,7 +36,7 @@ public abstract class Entity implements Serializable {
     private double rand1;
     private double rand2;
     
-    protected transient BufferedImage sprite;
+    protected BufferedImage sprite;
 
     public Entity(double x, double y, double ort, int maskW, int maskH, double spd, int dur, int spriteScale) {
         if (spriteScale < 1) {
@@ -141,19 +138,6 @@ public abstract class Entity implements Serializable {
 
         } catch (IOException e) {
             throw new IllegalStateException("Não foi possível carregar: " + file_path, e);
-        }
-    }
-
-    private void readObject(ObjectInputStream input)
-            throws IOException, ClassNotFoundException {
-        input.defaultReadObject();
-
-        if (sprite_path != null) {
-            try {
-                loadSprite(sprite_path);
-            } catch (RuntimeException e) {
-                throw new IOException("Não foi possível recarregar o sprite", e);
-            }
         }
     }
 

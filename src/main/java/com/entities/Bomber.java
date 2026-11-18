@@ -17,7 +17,6 @@ public class Bomber extends Fighter {
     private static final int[] PUNCH_ANIMATION_FRAMES = {0, 1, 2, 1, 0};
     
     private static final int PUNCH_DURATION = PUNCH_ANIMATION_FRAMES.length * TICKS_PER_FRAME;
-    private static final long serialVersionUID = 1L;
     
     private int punchTicksRemaining;
     
