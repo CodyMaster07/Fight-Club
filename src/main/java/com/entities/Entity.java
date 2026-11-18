@@ -1,8 +1,8 @@
 package com.entities;
 
 /**
- * @author evan.gabb
- * @author dleskow
+- @author evan.gabb
+- @author dleskow
  */
 import com.system.Ring;
 import java.awt.Color;
@@ -10,12 +10,13 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashSet;
 import javax.imageio.ImageIO;
 
 public abstract class Entity {
 
     public static final double maxAngleVar = Math.PI / 12.0;
+    public static final double DRAG_PER_TICK = 0.0075;
+    public static final double MIN_SPEED = 1.5;
     
     // Basic attributes
     protected double x;
@@ -24,6 +25,7 @@ public abstract class Entity {
     protected final int maskWidth;
     protected final int maskHeight;
     protected double speed;
+    private double impactSpeed;
     private int spriteScale;
     
     private int durability;
@@ -50,6 +52,7 @@ public abstract class Entity {
         this.maskHeight = maskH * spriteScale;
         
         this.speed = spd;
+        this.impactSpeed = spd;
         this.durability = dur;
         
         this.counter = 0;
@@ -69,6 +72,7 @@ public abstract class Entity {
         this.y = y;
         this.orientation = ort;      
         this.speed = spd;
+        this.impactSpeed = spd;
         this.durability = 1;
         
         this.counter = 0;
@@ -80,8 +84,6 @@ public abstract class Entity {
         this.maskWidth = getRenderWidth();
         this.maskHeight = getRenderHeight();
     }
-
-
 
     protected void loadSprite(String file_path) {
         try {
@@ -97,6 +99,7 @@ public abstract class Entity {
             e.printStackTrace();
         }
     }
+
     // Getters
     public double getX() { return x; }
     public double getY() { return y; }
@@ -104,6 +107,7 @@ public abstract class Entity {
     public int getMaskWidth() { return maskWidth; }
     public int getMaskHeight() { return maskHeight; }
     public double getSpeed() { return speed; }
+    public double getImpactSpeed() { return impactSpeed; }
     public int getDurability() { return durability; }
 
     public int getRenderWidth() {
@@ -119,14 +123,18 @@ public abstract class Entity {
     public void setY(double y) { this.y = y; }
     public void setOrientation(double orientation) { this.orientation = orientation; }
     public void setSpeed(double speed) { this.speed = speed; }
+    public void setImpactSpeed(double impactSpeed) { this.impactSpeed = impactSpeed; }
     public void setDurability(int durability) { this.durability = durability; }
 
     public static double normalizeAng(double angle) {
         return Math.atan2(Math.sin(angle), Math.cos(angle));
-//        return angle;
     }
 
     public void move() {
+        if (this.speed > MIN_SPEED) {
+            this.speed = Math.max(MIN_SPEED, this.speed - DRAG_PER_TICK);
+        }
+
         double dx = this.speed * Math.cos(this.orientation);
         double dy = this.speed * Math.sin(this.orientation);
 
@@ -150,31 +158,30 @@ public abstract class Entity {
         boolean top = y <= ring.getY();
         boolean bottom = y >= maxY;
 
-        
         double reflect = 0.0;
         double dAngle = ((rand1 > 0.5) ? rand2 * maxAngleVar : -rand2 * maxAngleVar);
 
         if (right) {
-            reflect = (Math.PI*0.5 - this.orientation)*2.0;
+            reflect = (Math.PI * 0.5 - this.orientation) * 2.0;
             this.x = maxX;
             ring.setCollided(2);
-            
         } else if (bottom) {
-            reflect = (-Math.PI - this.orientation)*2.0;
+            reflect = (-Math.PI - this.orientation) * 2.0;
             this.y = maxY;
             ring.setCollided(3);
         } else if (left) {
-            reflect = (Math.PI*1.5 - this.orientation)*2.0;
+            reflect = (Math.PI * 1.5 - this.orientation) * 2.0;
             this.x = ring.getX();
             ring.setCollided(4);
         } else if (top) {
-            reflect = (Math.PI - this.orientation)*2.0;
+            reflect = (Math.PI - this.orientation) * 2.0;
             this.y = ring.getY();
             ring.setCollided(1);
         }
-        if (right || left || top || bottom)
+
+        if (right || left || top || bottom) {
             setOrientation(normalizeAng(this.orientation + reflect + dAngle));
-        
+        }
     }
     
     public boolean intersects(Entity other) {
@@ -187,7 +194,7 @@ public abstract class Entity {
         double oMaxX = other.x + other.maskWidth;
         double oMaxY = other.y + other.maskHeight;
         
-        return this.x < oMaxX && maxX > other.x && this.y < oMaxY && maxY > other.y; // Script padrão de colisão AABB
+        return this.x < oMaxX && maxX > other.x && this.y < oMaxY && maxY > other.y;
     }
     
     public void onCollision(Entity other) {
@@ -203,7 +210,6 @@ public abstract class Entity {
         if (sprite != null) {
             g.drawImage(sprite, (int) x, (int) y, getRenderWidth(), getRenderHeight(), null);
         } else {
-            // Se não tiver sprite, renderiza retângulo vermelho
             g.setColor(Color.RED);
             g.fillRect((int) x, (int) y, getRenderWidth(), getRenderHeight());
         }

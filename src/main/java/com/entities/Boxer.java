@@ -1,12 +1,11 @@
 package com.entities;
 
-
 /**
- * @author evan.gabb
- * @author dleskow
+- @author evan.gabb
+- @author dleskow
  */
 public class Boxer extends Fighter {
-    private static final int DEFAULT_DURABILITY = 100;
+    private static final int DEFAULT_DURABILITY = 500;
     private static final int MASK_WIDTH = 24;
     private static final int MASK_HEIGHT = 34;
     private static final double DEFAULT_SPEED = 4.0;
@@ -44,8 +43,7 @@ public class Boxer extends Fighter {
             punchTicksRemaining--;
 
             int ticksPassados = PUNCH_DURATION - punchTicksRemaining;
-
-            int step = Math.min( ticksPassados / TICKS_PER_FRAME, PUNCH_ANIMATION_FRAMES.length - 1);
+            int step = Math.min(ticksPassados / TICKS_PER_FRAME, PUNCH_ANIMATION_FRAMES.length - 1);
 
             setAnimationFrame(PUNCH_ANIMATION_FRAMES[step]);
         }
@@ -53,13 +51,15 @@ public class Boxer extends Fighter {
     
     @Override
     public void onCollision(Entity other) {
-        if (other == null || other == this || isKO())
+        if (other == null || other == this || isKO() || other instanceof Bomb)
             return;
 
         if (!tryStartPunch())
             return;
 
-        if (other instanceof Fighter target)
-            target.takeDamage(PUNCH_DAMAGE);
+        if (other instanceof Fighter target) {
+            int finalDamage = calculateImpactDamage(PUNCH_DAMAGE);
+            target.takeDamage(finalDamage);
+        }
     }
 }

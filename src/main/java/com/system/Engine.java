@@ -1,25 +1,27 @@
 package com.system;
 
 /**
- * @author evan.gabb
- * @author dleskow
+- @author evan.gabb
+- @author dleskow
  */
 
+import com.entities.Bomb;
+import com.entities.Bomber;
 import com.entities.Boxer;
 import com.entities.Entity;
 import com.entities.Fighter;
-import com.entities.Ball;
-import com.game.Window;
+import com.entities.Team;
 import com.game.Input;
-import com.system.Ring;
+import com.game.Window;
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import com.entities.Bomber;
-import com.entities.Team;
  
 public class Engine implements Runnable {
+    
+    private static Engine currentInstance;
     
     private Window window;
     Random random = new Random();
@@ -31,25 +33,21 @@ public class Engine implements Runnable {
     private Ring ring;
     
     private List<Entity> entities;
+    private final List<Entity> pendingEntities = new ArrayList<>();
     private Fighter redFighter;
     private Fighter blueFighter;
 
-    public Engine (Window window, int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
-	this.window = window;
-    
+    public Engine(Window window, int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
+        currentInstance = this;
+        this.window = window;
     
         entities = new ArrayList<>();
-        
-        double[][] posPos = { {100.0, -100.0}, {-100.0, -100.0}, {-100.0, 100.0}, {100.0, 100.0} };
         
         int ringWidth = ring[0];
         int ringHeight = ring[1];
         
         double ringX = (window.getNatWidth() - ringWidth) / 2.0;
         double ringY = (window.getNatHeight() - ringHeight) / 2.0;
-        
-        double centerX = window.getNatWidth() / 2.0;
-        double centerY = window.getNatHeight() / 2.0;
         
         double fighterWidth = 34 * 2;
         double fighterHeight = 34 * 2;
@@ -64,17 +62,18 @@ public class Engine implements Runnable {
                 initialPos[i] = random.nextInt(1, 5);
         }
         
-//        int n_entity = 0;
-//        for (int i = 0; i < players[0]; i++) {
-//            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
-//            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
-//        }
-//        for (int i = 0; i < players[1]; i++) {
-//            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
-//        }
-        
         setActiveFighter(new Boxer(leftX, y, Math.PI / 4.0, Team.RED));
         setActiveFighter(new Bomber(rightX, y, -3.0 * Math.PI / 4.0, Team.BLUE));
+    }
+
+    public static Engine instance() {
+        return currentInstance;
+    }
+
+    public void spawnEntity(Entity entity) {
+        if (entity != null) {
+            pendingEntities.add(entity);
+        }
     }
     
     public synchronized void start() {
@@ -84,36 +83,40 @@ public class Engine implements Runnable {
         gameThread = new Thread(this);
         gameThread.start();
     }
+
     public synchronized void stop() {
-	    if (!isRunning) return;
-	    isRunning = false;
-	    // Only join if called from outside gameThread
-	    if (Thread.currentThread() != gameThread && gameThread != null) {
-	        try {
-	            gameThread.join();
-	        } catch (InterruptedException e) {
-	            Thread.currentThread().interrupt();
-	        }
-	    }
-	}
-    // Let's mainMenu waiting for game to finish
-	public void awaitFinish() {
-	    if (gameThread != null) {
-	        try {
-	            gameThread.join();
-	        } catch (InterruptedException e) {
-	            Thread.currentThread().interrupt();
-	        }
-	    }
-	}
+        if (!isRunning) return;
+        isRunning = false;
+        if (Thread.currentThread() != gameThread && gameThread != null) {
+            try {
+                gameThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public void awaitFinish() {
+        if (gameThread != null) {
+            try {
+                gameThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     private void checkEntitiesCollision() {
         for (int i = 0; i < entities.size(); i++) {
             Entity a = entities.get(i);
             for (int j = i + 1; j < entities.size(); j++) {
                 Entity b = entities.get(j);
                 if (a.intersects(b)) {
-                    physicalCollision(a, b); 
-                    // System.out.println("Tocou");
+                    if (!(a instanceof Bomb) && !(b instanceof Bomb)) {
+                        a.setImpactSpeed(a.getSpeed());
+                        b.setImpactSpeed(b.getSpeed());
+                        physicalCollision(a, b);
+                    }
                     a.onCollision(b);
                     b.onCollision(a);
                 }
@@ -122,24 +125,23 @@ public class Engine implements Runnable {
     }
     
     // Chamada somente se já houver sobreposição
-    private void physicalCollision (Entity a, Entity b) {
-        double distX = b.getX() + (b.getMaskWidth() /2.0) - (a.getX() + (a.getMaskWidth() /2.0));
-        double distY = b.getY() + (b.getMaskHeight()/2.0) - (a.getY() + (a.getMaskHeight()/2.0));
+    private void physicalCollision(Entity a, Entity b) {
+        double distX = b.getX() + (b.getMaskWidth() / 2.0) - (a.getX() + (a.getMaskWidth() / 2.0));
+        double distY = b.getY() + (b.getMaskHeight() / 2.0) - (a.getY() + (a.getMaskHeight() / 2.0));
         
-        double overlapX = (a.getMaskWidth()  + b.getMaskWidth())  / 2.0 - Math.abs(distX);
+        double overlapX = (a.getMaskWidth() + b.getMaskWidth()) / 2.0 - Math.abs(distX);
         double overlapY = (a.getMaskHeight() + b.getMaskHeight()) / 2.0 - Math.abs(distY);
         double aReflect = 0.0, adAngle = 0.0, bReflect = 0.0, bdAngle = 0.0;
         
         double vax, vay, vbx, vby;
 
-        if (overlapX < overlapY) { // Está colidindo no eixo X, pois o outro eixo deve estar alinhado
+        if (overlapX < overlapY) {
             double dirA2B = (distX >= 0) ? 1.0 : -1.0;
             double correction = overlapX / 2.0 + 0.001;
             a.setX(a.getX() - dirA2B * correction);
             b.setX(b.getX() + dirA2B * correction);
             vay = a.getSpeed() * Math.sin(a.getOrientation());
             vby = b.getSpeed() * Math.sin(b.getOrientation());
-            // Swaps = collision of equal mass
             vbx = a.getSpeed() * Math.cos(a.getOrientation());
             vax = b.getSpeed() * Math.cos(b.getOrientation());
         } else {
@@ -149,7 +151,6 @@ public class Engine implements Runnable {
             b.setY(b.getY() + dirA2B * correction);
             vax = a.getSpeed() * Math.cos(a.getOrientation());
             vbx = b.getSpeed() * Math.cos(b.getOrientation());
-            // Swaps = collision of equal mass
             vby = a.getSpeed() * Math.sin(a.getOrientation());
             vay = b.getSpeed() * Math.sin(b.getOrientation());
         }
@@ -188,12 +189,38 @@ public class Engine implements Runnable {
         redFighter.faceOpponent(blueFighter);
         blueFighter.faceOpponent(redFighter);
     }
+
+    private void handlePlayerControls(Input input) {
+        // Blue Fighter: WASD
+        if (blueFighter != null && !blueFighter.isKO()) {
+            if (input.isKeyDown(KeyEvent.VK_A)) {
+                blueFighter.rotateAim(-Fighter.AIM_ROTATION_SPEED);
+            }
+            if (input.isKeyDown(KeyEvent.VK_D)) {
+                blueFighter.rotateAim(Fighter.AIM_ROTATION_SPEED);
+            }
+            if (input.isKeyJustPressed(KeyEvent.VK_W)) {
+                blueFighter.usePrimaryAbility();
+            }
+        }
+
+        // Red Fighter: Arrow Keys
+        if (redFighter != null && !redFighter.isKO()) {
+            if (input.isKeyDown(KeyEvent.VK_LEFT)) {
+                redFighter.rotateAim(-Fighter.AIM_ROTATION_SPEED);
+            }
+            if (input.isKeyDown(KeyEvent.VK_RIGHT)) {
+                redFighter.rotateAim(Fighter.AIM_ROTATION_SPEED);
+            }
+            if (input.isKeyJustPressed(KeyEvent.VK_UP)) {
+                redFighter.usePrimaryAbility();
+            }
+        }
+    }
     
     @Override 
     public void run() {
-        // Configuração para ter 60 ticks por segundo (60 FPS)
         long lastTime = System.nanoTime();
-        
         double delta = 0;
         
         while (isRunning) {
@@ -208,22 +235,22 @@ public class Engine implements Runnable {
         }
         stop();
     }
-    
 
     public void tick() {
         Input input = window.getInput();
     
-        if (input.isKeyJustPressed(java.awt.event.KeyEvent.VK_ESCAPE)) {
-	        isRunning = false;
-	        return;
-	}
+        if (input.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
+            isRunning = false;
+            return;
+        }
+
+        handlePlayerControls(input);
         
         for (int i = 0; i < entities.size(); i++) {
             Entity e = entities.get(i);
             e.tick();
         }
-        checkEntitiesCollision(); // Aqui os danos são registrados mas ficam pendentes
-
+        checkEntitiesCollision();
 
         for (Entity entity : entities) {
             if (entity instanceof Fighter fighter) {
@@ -232,6 +259,12 @@ public class Engine implements Runnable {
         }
 
         entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
+        entities.removeIf(entity -> entity instanceof Bomb bomb && bomb.isExploded());
+
+        if (!pendingEntities.isEmpty()) {
+            entities.addAll(pendingEntities);
+            pendingEntities.clear();
+        }
         
         if (redFighter != null && redFighter.isKO()) {
             redFighter = null;
@@ -261,5 +294,3 @@ public class Engine implements Runnable {
         }
     }
 }
-
-    
