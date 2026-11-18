@@ -17,7 +17,7 @@ import java.util.List;
  * @author evan.gabb
  * @author dleskow
  */
-public class mainMenu {
+public class MainMenu {
     private Window window;
     public enum Menu { MAIN, GAME, LOAD, CHARACTER_SELECT }
     private Menu menu;
@@ -29,7 +29,7 @@ public class mainMenu {
     private int[] initialPos;
     private String menuMessage;
 
-    public mainMenu(int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
+    public MainMenu(int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
         this.window = new Window("Fight Club Game", res, frameScale);
         this.menu = Menu.MAIN;
         this.res = res;
