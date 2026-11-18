@@ -15,6 +15,8 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import com.entities.Bomber;
+import com.entities.Team;
  
 public class Engine implements Runnable {
     
@@ -28,6 +30,9 @@ public class Engine implements Runnable {
     private Ring ring;
     
     private List<Entity> entities;
+    
+    private Fighter redFighter;
+    private Fighter blueFighter;
     
     public Engine (int[] res, int[] ring, int frameScale, int[] players, int[] initialPos) {
         entities = new ArrayList<>();
@@ -44,6 +49,12 @@ public class Engine implements Runnable {
         double centerX = window.getNatWidth() / 2.0;
         double centerY = window.getNatHeight() / 2.0;
         
+        double fighterWidth = 34 * 2;
+        double fighterHeight = 34 * 2;
+        double y = ringY + (ringHeight - fighterHeight) / 2.0;
+        double leftX = ringX + (ringWidth - fighterWidth) * 0.25;
+        double rightX = ringX + (ringWidth - fighterWidth) * 0.75;
+        
         this.ring = Ring.init(ringX, ringY, ringWidth, ringHeight);
         
         for (int i = 0; i < initialPos.length; i++) {
@@ -51,14 +62,17 @@ public class Engine implements Runnable {
                 initialPos[i] = random.nextInt(1, 5);
         }
         
-        int n_entity = 0;
-        for (int i = 0; i < players[0]; i++) {
-            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
-            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
-        }
-        for (int i = 0; i < players[1]; i++) {
-            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
-        }
+//        int n_entity = 0;
+//        for (int i = 0; i < players[0]; i++) {
+//            String sprite_path = (Math.random() > 0.5) ? "/res/ballRed.png" : "/res/ballBlue.png";
+//            entities.add(new Ball(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1],  Math.PI / 4.0, 5.0 , sprite_path ));
+//        }
+//        for (int i = 0; i < players[1]; i++) {
+//            entities.add(new Boxer(centerX + posPos[(initialPos[i] - 1)][0], centerY + posPos[(initialPos[i] - 1)][1], Math.PI / 4.0));
+//        }
+        
+        setActiveFighter(new Boxer(leftX, y, Math.PI / 4.0, Team.RED));
+        setActiveFighter(new Bomber(rightX, y, -3.0 * Math.PI / 4.0, Team.BLUE));
     }
     
     public synchronized void start() {
@@ -137,6 +151,32 @@ System.out.printf("\tB: %f -> %f -> %f\n", b.getOrientation()*180/Math.PI, bRefl
         b.setOrientation(Entity.normalizeAng(bReflect + bdAngle));
     }
     
+    private void setActiveFighter(Fighter next) {
+        if (next == null || next.isKO()) {
+            throw new IllegalArgumentException("O lutador deve estar vivo");
+        }
+
+        if (next.getTeam() == Team.RED) {
+            entities.remove(redFighter);
+            redFighter = next;
+        } else {
+            entities.remove(blueFighter);
+            blueFighter = next;
+        }
+
+        entities.add(next);
+        updateFacing();
+    }
+
+    private void updateFacing() {
+        if (redFighter == null || blueFighter == null) {
+            return;
+        }
+
+        redFighter.faceOpponent(blueFighter);
+        blueFighter.faceOpponent(redFighter);
+    }
+    
     @Override 
     public void run() {
         // Configuração para ter 60 ticks por segundo (60 FPS)
@@ -172,6 +212,15 @@ System.out.printf("\tB: %f -> %f -> %f\n", b.getOrientation()*180/Math.PI, bRefl
         }
 
         entities.removeIf(entity -> entity instanceof Fighter fighter && fighter.isKO());
+        
+        if (redFighter != null && redFighter.isKO()) {
+            redFighter = null;
+        }
+        if (blueFighter != null && blueFighter.isKO()) {
+            blueFighter = null;
+        }
+        
+        updateFacing();
         ring.tick();
     }
     
