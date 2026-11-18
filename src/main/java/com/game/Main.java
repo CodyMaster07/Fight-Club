@@ -10,7 +10,7 @@ import com.system.Engine;
 public class Main {
     private static int[] res = {800, 600};
     private static int[] ring = {500, 500};
-    private static int frameScale = 1;
+    private static int frameScale = 2;
     private static int[] players = {4, 2};
     private static int[] initialPos = new int[players[0] + players[1]];
     public static void main(String[] args) {
