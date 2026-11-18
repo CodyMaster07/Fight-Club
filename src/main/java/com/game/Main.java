@@ -15,7 +15,7 @@ public class Main {
     public static void main(String[] args) {
     	try {
     		parseArgs(args);
-			mainMenu main_menu = new mainMenu(res, ring, frameScale, players, initialPos);
+			MainMenu main_menu = new MainMenu(res, ring, frameScale, players, initialPos);
 			main_menu.handleMenus();
     	} catch (Exception e) {
     		System.out.print("IO Error: " + e.getMessage());
